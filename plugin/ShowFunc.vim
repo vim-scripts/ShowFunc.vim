@@ -1,10 +1,13 @@
 " ------------------------------------------------------------------------------
 " Filename:      ~/.vim/plugin/ShowFunc.vim
 " VimScript:     #397
-" Last Modified: 01 Apr 2003 14:33:38 by davev
+" Last Modified: 21 Sep 2003 11:51:19 AM by Dave Vehrs
 " Maintainer:    Dave Vehrs (davev at ziplip.com)
 " Copyright:     (C) 2002-2003 Dave Vehrs
-"                Distributed under the terms of the GNU General Public License
+"                This script is free software; you can redistribute it and/or 
+"                modify it under the terms of the GNU General Public License as 
+"                published by the Free Software Foundation; either version 2 of 
+"                the License, or (at your option) any later version.
 " Description:   This script creates a hyper link list of all the functions,
 "                subroutines, classes, macros or procedures in a  single file or
 "                all currently open windows and displays them in a dynamically
@@ -19,7 +22,6 @@
 "                :so ShowFunc.vim.
 "                                             Additional notes at end of file...
 " ------------------------------------------------------------------------------
-
 " Exit if already loaded. 
 if ( exists("loaded_showfunc") || &cp ) | finish | endif 
 let g:loaded_showfunc=1 
@@ -27,10 +29,14 @@ let g:loaded_showfunc=1
 " Enable filetype detection 
 filetype on
 " ------------------------------------------------------------------------------
+" Configuration:                                                             {{{
+
 " Test for and if necessary configure all default settings.  If you would like
 " to change any setting, just add let g:variablename = "new-value" to your
 " .vimrc.
-"
+" For Example, to change the location of the ctags binary, add this:
+"     let g:showfuncctagsbin = "/bin"
+ 
 " Default ScanType Options:   buffers  |  Scan all open buffers.
 "                             current  |  Scan only the current buffer.
 "                             windows  |  Scan all open windows.
@@ -47,10 +53,11 @@ if ( !exists("g:ShowFuncSortType") )
 endif
 
 " If necessary, uncomment and set the g:showfuncctagsbin variable.
-" i.e. for vim on Windows.
-" let g:showfuncctagsbin = "C:\\gnu\\ctags\\ctags.exe"
+" let g:showfuncctagsbin = "ctags"
+
+"                                                                            }}}
 " ------------------------------------------------------------------------------
-" Functions 
+" Functions:                                                                  {{{
 
 " Rotate through available scan types.
 function! <SID>ChangeScanType()
@@ -75,14 +82,9 @@ function! s:CtagsTest(path)
   " if the location of the ctags executable is not already configured, then 
   " attempt to find it....
   if ( a:path == "unk" )
-    if ( has("unix") )
-      let l:test_paths = "/usr/local/bin/ctags /usr/bin/ctags "
-    elseif ( has("win32") )
-      let l:test_paths = "C:\\gnu\\ctags\\ctags.exe "
-    else 
-      let l:test_paths = ""
-    endif
-    let l:rpath = "fail"
+    let l:test_paths = "/usr/local/bin/ctags ".
+      \ "/usr/bin/ctags C:\\gnu\ctags\\ctags.exe "
+    let l:rpath = "fail"  
     " Loop over tag lists and create the grepformat statement.
     while l:test_paths != ''
       let l:pathcut = strpart(l:test_paths,0,stridx(l:test_paths,' '))
@@ -118,10 +120,10 @@ function! s:CtagsTest(path)
   return l:rpath
 endfunction 
 
-" Test Ctags version
+" Test to be sure we have Exuberant Ctags
 function! s:CtagsVersionTest(path)
   " Test Ctags for correct version. 
-  let ctagsvertest = strpart(strtrans(system(a:path." --version")),
+  let ctagsvertest = strpart(strtrans(system(a:path." -x  --version")),
     \ 0,15)
   if ( ctagsvertest != "Exuberant Ctags" )
     if ( !has("gui_running") || has("win32") )
@@ -176,7 +178,7 @@ function! s:OpenCWin()
   return
 endfunction
 
-" Set Folds by filename
+" Set Folds by filename.
 function! s:SetFolds()
   let l:test_line = getline(v:lnum)
   let l:test_filename = strpart(l:test_line,0,stridx(l:test_line,'|'))
@@ -192,142 +194,59 @@ function! s:SetFolds()
 endfunction
 
 " Set FoldText to filename and tag count.
-" Note: Do not use s: or <SID> on this function or the format will be lost the
-" first time a fold is opened.
 function! SetFoldText()
-  let l:linefiller = ""
+  let l:line = ""
+  let l:textwidth = &textwidth - 20
   let l:line = getline(v:foldstart)
-  let l:subline = strpart(l:line,0,stridx(l:line,'|'))
-  if ( strlen(l:subline) < 59 )
+  let l:line = strpart(l:line,0,stridx(l:line,'|'))
+  if ( strlen(l:line) < l:textwidth )
     let l:count =  59 - strlen(l:subline)
-    while ( l:count > 0 )
-      let l:linefiller = l:linefiller." "
-      let l:count = l:count - 1
+    while ( strlen(l:line) < l:textwidth )
+      let l:line = l:line." "
     endwhile
   endif
   let l:tag_count = v:foldend - v:foldstart + 1
   if ( l:tag_count <= 9 )
-    return v:folddashes."+ File: ".l:subline.l:linefiller." Tags:    ".
-      \ l:tag_count." "
+    return v:folddashes."+ File: ".l:line." Tags:    ". l:tag_count." "
   elseif ( l:tag_count <= 99 )
-    return v:folddashes."+ File: ".l:subline.l:linefiller." Tags:   ".
-      \ l:tag_count." "
+    return v:folddashes."+ File: ".l:line." Tags:   ". l:tag_count." "
   elseif ( l:tag_count <= 999 )
-    return v:folddashes."+ File: ".l:subline.l:linefiller." Tags:  ".
-      \ l:tag_count." "
+    return v:folddashes."+ File: ".l:line." Tags:  ". l:tag_count." "
   else
-    return v:folddashes."+ File: ".l:subline.l:linefiller." Tags: ".
-      \ l:tag_count." "
+    return v:folddashes."+ File: ".l:line." Tags: ". l:tag_count." "
   endif
 endfunction
 
-" SetGrepFormat and SetGrepPrg both have language and tag support hard coded so
-" any changes to exuberant ctags will need to be reflected here.  And on top of
-" that its ugly.  I submitted a patch to exuberant ctags that has been accepted
-" for inclusion in the next version that will allow us to query ctags directly
-" for supported languages and tags.
-function! s:SetGrepFormat()
-  let l:tags = ''
-  let l:tag_return = ''
-  let l:tag_count = 1
-  " Define tags for each language.
-  if ( &filetype == "asm" )
-    let l:tags = 'define label macro type'
-  elseif ( &filetype == "asp" )
-    let l:tags = 'function sub'
-  elseif ( &filetype == "awk" )
-    let l:tags = 'function'
-  elseif ( &filetype == "beta" )
-    let l:tags = 'fragment pattern slot virtual'
-  elseif ( &filetype == "c" )
-    let l:tags = 'class enumerator enum function macro member namespace'.
-    \   ' prototype struct typedef union variable externvar'
-  elseif ( &filetype == "cpp" )
-    let l:tags = 'class enumerator enum function macro member namespace'.
-    \   ' prototype struct typedef union variable externvar'
-  elseif ( &filetype == "cobol" )
-    let l:tags = 'data file group paragraph program section'
-  elseif ( &filetype == "eiffel" )
-    let l:tags = 'class feature local'
-  elseif ( &filetype == "fortran" )
-    let l:tags = 'block common component entry function interface label'.
-    \   ' local module namelist program subroutine type variable'
-  elseif ( &filetype == "java" )
-    let l:tags = 'class field interface method package'
-  elseif ( &filetype == "lisp" )
-    let l:tags = 'function'
-  elseif ( &filetype == "lua" )
-    let l:tags = 'function'
-	elseif ( &filetype == "make" )
-    let l:tags = 'macro'
-  elseif ( &filetype == "pascal" )
-    let l:tags = 'function procedure'
-	elseif ( &filetype == "perl" )
-    let l:tags = 'package subroutine'
-  elseif ( &filetype == "php" )
-    let l:tags = 'class function'
-  elseif ( &filetype == "python" )
-    let l:tags = 'class function member'
-  elseif ( &filetype == "rexx" )
-    let l:tags = 'subroutine'
-  elseif ( &filetype == "ruby" )
-    let l:tags = 'class method mixin singleton'
-  elseif ( &filetype == "scheme" )
-    let l:tags = 'function set'
-  elseif ( &filetype == "sh" )
-    let l:tags = 'function'
-  elseif ( &filetype == "sql" )
-    let l:tags = 'cursor field function local package procedure prototype'.
-    \   ' record subtype table trigger variable'
-  elseif ( &filetype == "slang" )
-    let l:tags = 'function namespace'
-  elseif ( &filetype == "tcl" )
-    let l:tags = 'class method procedure'
-  elseif ( &filetype == "vera" )
-    let l:tags = 'class enumerator enum function macro member program'.
-    \  ' prototype tas typedef variable externvar'
-  elseif ( &filetype == "verilog" )
-    let l:tags = 'function module parameter port reg task variable wire'
-  elseif ( &filetype == "vim" )
-    " I am submitted an extension to exuberant ctags to add augroup to the list
-    " of vim types in mid-January, 2003.  It was accepted by Darren Hiebert on
-    " January 30 to be included in next release.
-    let l:tags = 'augroup function variable'
-  elseif ( &filetype == "yacc" )
-    let l:tags = 'label'
-  else | return "fail" | endif
-  let l:tags = l:tags." "
-  " Loop over tag lists and create the grepformat statement.
-  while l:tags != ''
-    let l:tagcut = strpart(l:tags,0,stridx(l:tags,' '))
-    if ( l:tag_count == 1  && l:tagcut != '' )
-      let l:tag_return = '%*\k%*\s'.l:tagcut.'%*\s%l%*\s%f %m'
-      let l:tag_count = l:tag_count + 1
-    elseif ( l:tag_count > 1 && l:tagcut != '' )
-      let l:tag_return = l:tag_return.',%*\k%*\s'.l:tagcut.'%*\s%l%*\s%f %m'
-    else | break | endif
-    let l:tags = strpart(l:tags,stridx(l:tags,' ') + 1)
-  endwhile
-  return l:tag_return
-endfunction
-
+" Set ctags options to call.
 function! s:SetGrepPrg(sort)
-  if ( &filetype == "asm"     || &filetype == "asp"     || &filetype == "awk"   ||
-     \ &filetype == "beta"    || &filetype == "c"       || &filetype == "cobol" ||
-     \ &filetype == "eiffel"  || &filetype == "fortran" || &filetype == "java"  ||
-     \ &filetype == "lisp"    || &filetype == "lua"     || &filetype == "make"  ||
-     \ &filetype == "pascal"  || &filetype == "perl"    || &filetype == "php"   ||
-     \ &filetype == "python"  || &filetype == "rexx"    || &filetype == "ruby"  ||
-     \ &filetype == "scheme"  || &filetype == "sh"      || &filetype == "slang" ||
-     \ &filetype == "sql"     || &filetype == "tcl"     || &filetype == "vera"  ||
-     \ &filetype == "verilog" || &filetype == "vim"     || &filetype == "yacc"  )
-    let l:ret_cmd = g:showfuncctagsbin.' -x --language-force='.&filetype.' --sort='.a:sort
-  elseif ( &filetype == "cpp"  )
-    let l:ret_cmd = g:showfuncctagsbin.' -x --language-force=c++ --sort='.a:sort
+  if ( g:CtagsVersion < 5 )
+    if ( &filetype == "asm"     || &filetype == "asp"     || &filetype == "awk"   ||
+      \ &filetype == "beta"    || &filetype == "c"       || &filetype == "cobol" ||
+      \ &filetype == "eiffel"  || &filetype == "fortran" || &filetype == "java"  ||
+      \ &filetype == "lisp"    || &filetype == "lua"     || &filetype == "make"  ||
+      \ &filetype == "pascal"  || &filetype == "perl"    || &filetype == "php"   ||
+      \ &filetype == "python"  || &filetype == "rexx"    || &filetype == "ruby"  ||
+      \ &filetype == "scheme"  || &filetype == "sh"      || &filetype == "slang" ||
+      \ &filetype == "sql"     || &filetype == "tcl"     || &filetype == "vera"  ||
+      \ &filetype == "verilog" || &filetype == "vim"     || &filetype == "yacc"  )
+      let l:grep_return = g:showfuncctagsbin .' -x --language-force=' . &filetype . 
+        \ ' --sort=' . a:sort
+    elseif ( &filetype == "cpp"  )
+      let l:grep_return = g:showfuncctagsbin .' -x --language-force=c++ --sort=' . 
+        \ a:sort
+    else
+       return "fail" 
+    endif
   else
-     return "fail" 
+    if ( &filetype == "cpp" ) | let l:cfiletype = "c++"
+    else                      | let l:cfiletype = &filetype | endif
+    let l:filetest = s:TestFileType(l:cfiletype)
+    if ( l:filetest != "false" )
+      let l:grep_return = g:showfuncctagsbin . ' -x --language-force=' . 
+        \ l:cfiletype . ' --sort=' . a:sort
+    else | let l:grep_return = "fail" | endif
   endif
-  return l:ret_cmd
+  return l:grep_return
 endfunction 
 
 function! <SID>ShowFuncOpen()
@@ -340,27 +259,25 @@ function! <SID>ShowFuncOpen()
     let l:gp_s = &grepprg
     set grepformat&vim
     set grepprg&vim
+    let &grepformat = '%*\k%*\s%*[^0-9]%*\s%l%*\s%f %m' 
 		if ( g:ShowFuncScanType == "buffers" )
       " Scan all open buffers.
 	    let l:currbuf = bufnr("%")
-	    bufdo! let &grepformat = s:SetGrepFormat() | let &grepprg =
-		  \ s:SetGrepPrg(g:ShowFuncSortType) | if ( &grepformat != "fail" &&
-			\ &grepprg != "fail" )| if ( &readonly == 0 ) | update | endif |
+	    bufdo! let &grepprg = s:SetGrepPrg(g:ShowFuncSortType) | 
+      \ if ( &grepprg != "fail" ) | if ( &readonly == 0 ) | update | endif |
 			\ if ( l:count == 0 ) | silent! grep! % | let l:count =  l:count + 1 |
 			\ else | silent! grepadd! % | endif | endif
 		  execute 'buffer '.l:currbuf
 		elseif ( g:ShowFuncScanType == "windows" )
 		  " Scan all open windows.
-	    windo let &grepformat = s:SetGrepFormat() | let &grepprg =
-		  \ s:SetGrepPrg(g:ShowFuncSortType) | if ( &grepformat != "fail" &&
-			\ &grepprg != "fail" )| if ( &readonly == 0 ) | update | endif |
+	    windo let &grepprg = s:SetGrepPrg(g:ShowFuncSortType) | 
+      \ if ( &grepprg != "fail" ) | if ( &readonly == 0 ) | update | endif |
 			\ if ( l:count == 0 ) | silent! grep! %| let l:count =  l:count + 1 |
 			\ else | silent! grepadd! % | endif | endif
 		elseif ( g:ShowFuncScanType == "current" )
 		  " Scan current buffer only.
-  	  let &grepformat = s:SetGrepFormat()
       let &grepprg = s:SetGrepPrg(g:ShowFuncSortType)
-		  if ( &grepformat != "fail" && &grepprg != "fail" )
+		  if ( &grepprg != "fail" )
         if ( &readonly == 0 ) | update | endif
         silent! grep! %
 		  else
@@ -383,14 +300,41 @@ function! <SID>ShowFuncOpen()
 	set nolazyredraw
 	redraw!
 endfunction  
+
+" Test for supported filetype.
+function! s:TestFileType(type) 
+  let l:supportedfiles = g:CTags_Supported_FileTypes
+  while ( l:supportedfiles != "^@" && l:supportedfiles != "" ) 
+    let l:sfcut = strpart(l:supportedfiles,0,stridx(l:supportedfiles,"^@"))
+    if ( l:sfcut ==? a:type ) 
+      return "true"
+    endif
+    let l:supportedfiles = strpart(l:supportedfiles,stridx(l:supportedfiles,'^@') + 2)
+  endwhile
+  return "false"
+endfunction
+
+"                                                                            }}}
 " ------------------------------------------------------------------------------
-" Test Ctags Binary to be sure its the right one...
+" Test Environment:                                                          {{{
+
+" Test Ctags Binary to be sure its the correct version.
 if ( exists("g:showfuncctagsbin") )
   let g:showfuncctagsbin = s:CtagsTest(g:showfuncctagsbin)
 else
   let g:showfuncctagsbin = s:CtagsTest("unk")
 endif
 
+" Define default supportted file types list.
+if !exists("g:CTags_Supported_FileTypes")
+  let g:CTags_Supported_FileTypes = strtrans(system(g:showfuncctagsbin .
+    \ "-x --list-languages"))
+endif
+
+" Determine Ctags version.
+let teststring = strtrans(system(g:showfuncctagsbin . " -x --version"))
+let g:CtagsVersion = strpart(teststring,(stridx(teststring,".")+1),
+  \ ((stridx(teststring,",")-(stridx(teststring,"." )+1))))
 
 if ( g:showfuncctagsbin == "fail" )
   " echo confirm ("Failed: ".g:showfuncctagsbin,"&ok",0,"Warning")
@@ -408,8 +352,10 @@ if ( g:showfuncctagsbin == "fail" )
   delfunction <SID>ShowFuncOpen
   finish
 endif 
+
+"                                                                            }}}
 " ------------------------------------------------------------------------------
-" Key Mappings
+" Key Mappings:                                                              {{{
 " To change the main key mapping, add this to your .vimrc file:
 "   map <key> <PLug>ShowFunc
 
@@ -428,22 +374,24 @@ endif
 noremap  <silent> <Plug>ShowFunc   :call <SID>ShowFuncOpen()<CR>
 noremap! <silent> <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
 
-" Cwindow specific key mappings can be found in the OpenCWinfunction.
+" Cwindow specific key mappings can be found in the OpenCWinfunction.        }}}
 " ------------------------------------------------------------------------------
-" Known Issues:
+" Known Issues:                                                              {{{
 " 1.  Error messages that occur as gvim is loading (on Linux) do not display in 
 "     GUI windows.  When called from a menu or icon, it appears that gvim is hung
 "     (it appears in the ps listings but no window appears).  To avoid this I 
 "     have disabled the display of errors during gvim loading and the ShowFunc 
 "     script simply exits.  
+"                                                                            }}}
 " ------------------------------------------------------------------------------
-" Feature Wishlist:
+" Feature Wishlist:                                                          {{{
 " 1.  If scan is set to "current", make cwindow update on buffer change (except
 "     to the cwindow)
 " 2.  Window size ratios should remain the same as ShowFunc opens and closes.
 " 3.  Patch vim to allow for setlocal statusline.
+"                                                                            }}}
 " ------------------------------------------------------------------------------
-" Version History:
+" Version History:                                                           {{{
 " 1.0      08-24-2002  Initial Release.
 " 1.1      08-26-2002  Patches to Fortran (thanks to Ajit Thakkar), Pascal,
 "                      and Python support.
@@ -480,9 +428,18 @@ noremap! <silent> <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
 " 1.4.3    03-15-2003  Automatically fold output on filename for multiple file
 "                      scans (all buffers or windows).
 " 1.4.4    03-17-2003  Improved error handling.  Improved SetFoldText().
-" 1.4.5    04-01-2003  More error handling improvements, including tests for the 
-"                      correct version of ctags, and keymap assignment.  Thanks
-"                      to Mark Thomas for his assistance in finding and fixing a
-"                      bug in the executable detection on Windows.  
+" 1.4.5    03-22-2003  More error handling improvements, including tests for the 
+"                      correct version of ctags, and keymap assignment.  I want
+"                      to thank Mark Thomas for his assistance in finding and 
+"                      fixing a bug in the ctags executable detection on Windows.  
+" 1.5     09-21-2003   Created a more generic grep format so that explicit type 
+"                      definitions are no longer necessary (eliminating the 
+"                      SetGrepFormat function).  Modified the SetGrepPrg function 
+"                      to detect Ctags versions earlier than 5.5.  Supportted 
+"                      filetypes for Ctags versions 5.4 are statically assigned.  
+"                      With Ctags versions 5.5 (and later) supported filetypes 
+"                      are detected dynamically (including those defined by 
+"                      regular expressions (--regex-<LANG>).  
+"                                                                            }}}
 " ------------------------------------------------------------------------------
-" vim: tw=80 ts=2 sw=2
+" vim:tw=80:ts=2:sw=2:
