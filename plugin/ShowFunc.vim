@@ -1,7 +1,7 @@
 " ------------------------------------------------------------------------------
 " Filename:      ~/.vim/plugin/ShowFunc.vim
 " VimScript:     #397
-" Last Modified: 17 Mar 2003 09:35:49 PM by Dave V.
+" Last Modified: 01 Apr 2003 14:33:38 by davev
 " Maintainer:    Dave Vehrs (davev at ziplip.com)
 " Copyright:     (C) 2002-2003 Dave Vehrs
 "                Distributed under the terms of the GNU General Public License
@@ -19,61 +19,39 @@
 "                :so ShowFunc.vim.
 "                                             Additional notes at end of file...
 " ------------------------------------------------------------------------------
-" Exit if already loaded.
-if ( exists("loaded_showfunc") || &cp ) | finish | endif
-let loaded_showfunc=1
 
-" Enable filetype detection
+" Exit if already loaded. 
+if ( exists("loaded_showfunc") || &cp ) | finish | endif 
+let g:loaded_showfunc=1 
+			 
+" Enable filetype detection 
 filetype on
 " ------------------------------------------------------------------------------
-" Set location of the ctags executable
-if !exists("g:Ctagsbin")
-  if executable("/usr/local/bin/ctags")
-    " Default install location.
-    let g:Ctagsbin = "/usr/local/bin/ctags"
-  elseif executable("/usr/bin/ctags")
-    " Default Debian install location.
-    let g:Ctagsbin = "/usr/bin/ctags"
-  else
-    echo confirm ("ShowFunc Error: Ctags binary not found.\n",
-      \           "&ok", 0, "Info")
-    finish
-  endif
-endif
-
+" Test for and if necessary configure all default settings.  If you would like
+" to change any setting, just add let g:variablename = "new-value" to your
+" .vimrc.
+"
 " Default ScanType Options:   buffers  |  Scan all open buffers.
 "                             current  |  Scan only the current buffer.
 "                             windows  |  Scan all open windows.
-if !exists("g:ShowFuncScanType")
+if ( !exists("g:ShowFuncScanType") )
   let g:ShowFuncScanType = "buffers"
 endif
 
 " Default SortType Options:   yes      |  Display output sorted alphabetically.
 "                             no       |  Display output in file order.
 "                             foldcase |  Display output sorted alphabetically,
-"                                         disregarding case.
-if !exists("g:ShowFuncSortType")
+"                                      |  disregarding case.
+if ( !exists("g:ShowFuncSortType") )
   let g:ShowFuncSortType = "foldcase"
 endif
 
+" If necessary, uncomment and set the g:showfuncctagsbin variable.
+" i.e. for vim on Windows.
+" let g:showfuncctagsbin = "C:\\gnu\\ctags\\ctags.exe"
 " ------------------------------------------------------------------------------
-" To change the main key mapping, add this to your .vimrc file:
-"   map <key> <PLug>ShowFunc
+" Functions 
 
-if ( !hasmapto('<PLUG>ShowFunc') && (maparg('<F1>') == '') )
-	map  <F1> <Plug>ShowFunc
-  map! <F1> <Plug>ShowFunc
-elseif ( !hasmapto('<PLUG>ShowFunc') )
-  echo confirm ("ShowFunc Error: No Key mapped.\n".
-    \           "<F1> is taken and a replacement was not assigned.\n",
-    \           "&ok", 0, "Info")
-  finish
-endif
-noremap  <silent> <Plug>ShowFunc   :call <SID>ShowFuncOpen()<CR>
-noremap! <silent> <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
-
-" Cwindow specific key mappings can be found in the OpenCWinfunction.
-" ------------------------------------------------------------------------------
 " Rotate through available scan types.
 function! <SID>ChangeScanType()
 	if g:ShowFuncScanType == "buffers"     | let g:ShowFuncScanType = "windows"
@@ -92,8 +70,76 @@ function! <SID>ChangeSortType()
 	call <SID>ShowFuncOpen()
 endfunction
 
-" Display a simple help window.
-function! <SID>DisplayHelp()
+" Ctags binary tests
+function! s:CtagsTest(path)
+  " if the location of the ctags executable is not already configured, then 
+  " attempt to find it....
+  if ( a:path == "unk" )
+    if ( has("unix") )
+      let l:test_paths = "/usr/local/bin/ctags /usr/bin/ctags "
+    elseif ( has("win32") )
+      let l:test_paths = "C:\\gnu\\ctags\\ctags.exe "
+    else 
+      let l:test_paths = ""
+    endif
+    let l:rpath = "fail"
+    " Loop over tag lists and create the grepformat statement.
+    while l:test_paths != ''
+      let l:pathcut = strpart(l:test_paths,0,stridx(l:test_paths,' '))
+      if ( executable(l:pathcut) )
+        let l:rpath = s:CtagsVersionTest(l:pathcut)
+        if ( l:rpath != "fail" )
+          break
+        endif
+      endif
+      let l:test_paths = strpart(l:test_paths,stridx(l:test_paths,' ') + 1)
+    endwhile
+    if ( l:rpath == "fail" )
+      if ( !has("gui_running") || has("win32") )
+        echo confirm ( "ShowFunc Error: Ctags binary not found.\n".
+          \            "Please set g:showfuncctagsbin in your .vimrc.\n" ,
+          \            "&ok", 0, "Warning" )
+      endif
+    endif
+  else
+    " Else test the variable to see that it is actually an executable.
+    if ( executable(a:path) )
+      let l:rpath = s:CtagsVersionTest(a:path)
+    else
+      if ( !has("gui_running") || has("win32") )
+        echo confirm ( "ShowFunc Error: Ctags binary not found.\n".
+          \            "Your g:showfuncctagsbin may be set incorrectly.\n",
+          \            "&ok", 0, "Warning" )
+      endif
+      let g:loaded_showfunc = 0
+      let l:rpath = "fail"
+    endif  
+  endif
+  return l:rpath
+endfunction 
+
+" Test Ctags version
+function! s:CtagsVersionTest(path)
+  " Test Ctags for correct version. 
+  let ctagsvertest = strpart(strtrans(system(a:path." --version")),
+    \ 0,15)
+  if ( ctagsvertest != "Exuberant Ctags" )
+    if ( !has("gui_running") || has("win32") )
+      echo confirm ( "ShowFunc Error: Incorrect Version of Ctags.\n".
+        \            "Download the correct version from ".
+        \            "http://ctags.sourceforge.net\n", 
+        \            "&ok", 0, "Warning" )
+    endif
+    let g:loaded_showfunc = 0
+    let l:rpath = "fail"
+  else
+    let l:rpath = a:path
+  endif
+  return l:rpath
+endfunction
+
+ " Display a simple help window.
+function! <SID>DisplayHelp() 
   echo confirm ("ShowFunc Help:          \n".
   \             " c  Close                   \n".
   \             " r  Refresh                 \n".
@@ -121,7 +167,7 @@ function! s:OpenCWin()
     execute 'belowright copen '.l:cwin_filelen
   endif
   " Set cwindow specific key mappings.
-  nnoremap <buffer> <silent> C :cclose<CR>
+  nnoremap <buffer> <silent> c :cclose<CR>
   nnoremap <buffer> <silent> h :call <SID>DisplayHelp()<CR>
   nnoremap <buffer> <silent> r :call <SID>ShowFuncOpen()<CR>
   nnoremap <buffer> <silent> s :call <SID>ChangeSortType()<CR>
@@ -145,7 +191,7 @@ function! s:SetFolds()
   endif
 endfunction
 
-" Set FoldText to filename only.
+" Set FoldText to filename and tag count.
 " Note: Do not use s: or <SID> on this function or the format will be lost the
 " first time a fold is opened.
 function! SetFoldText()
@@ -275,11 +321,14 @@ function! s:SetGrepPrg(sort)
      \ &filetype == "scheme"  || &filetype == "sh"      || &filetype == "slang" ||
      \ &filetype == "sql"     || &filetype == "tcl"     || &filetype == "vera"  ||
      \ &filetype == "verilog" || &filetype == "vim"     || &filetype == "yacc"  )
-    return g:Ctagsbin.' -x --language-force='.&filetype.' --sort='.a:sort
+    let l:ret_cmd = g:showfuncctagsbin.' -x --language-force='.&filetype.' --sort='.a:sort
   elseif ( &filetype == "cpp"  )
-    return g:Ctagsbin.' -x --language-force=c++ --sort='.a:sort
-  else | return "fail" | endif
-endfunction
+    let l:ret_cmd = g:showfuncctagsbin.' -x --language-force=c++ --sort='.a:sort
+  else
+     return "fail" 
+  endif
+  return l:ret_cmd
+endfunction 
 
 function! <SID>ShowFuncOpen()
 	set lazyredraw
@@ -322,6 +371,7 @@ function! <SID>ShowFuncOpen()
     let &grepprg = l:gp_s
 		execute s:OpenCWin()
 		if ( g:ShowFuncScanType == "buffers" || g:ShowFuncScanType ==  "windows" )
+      " Do folding.
       let g:FoldFileName = ''
       setlocal foldexpr=s:SetFolds()
       setlocal foldmethod=expr
@@ -332,7 +382,60 @@ function! <SID>ShowFuncOpen()
   endif
 	set nolazyredraw
 	redraw!
-endfunction
+endfunction  
+" ------------------------------------------------------------------------------
+" Test Ctags Binary to be sure its the right one...
+if ( exists("g:showfuncctagsbin") )
+  let g:showfuncctagsbin = s:CtagsTest(g:showfuncctagsbin)
+else
+  let g:showfuncctagsbin = s:CtagsTest("unk")
+endif
+
+
+if ( g:showfuncctagsbin == "fail" )
+  " echo confirm ("Failed: ".g:showfuncctagsbin,"&ok",0,"Warning")
+  let g:loaded_showfunc = 0
+  delfunction <SID>ChangeScanType
+  delfunction <SID>ChangeSortType
+  delfunction s:CtagsTest
+  delfunction s:CtagsVersionTest
+  delfunction <SID>DisplayHelp
+  delfunction s:OpenCWin
+  delfunction s:SetFolds
+  delfunction SetFoldText
+  delfunction s:SetGrepFormat
+  delfunction s:SetGrepPrg
+  delfunction <SID>ShowFuncOpen
+  finish
+endif 
+" ------------------------------------------------------------------------------
+" Key Mappings
+" To change the main key mapping, add this to your .vimrc file:
+"   map <key> <PLug>ShowFunc
+
+if ( !hasmapto('<PLUG>ShowFunc') && (maparg('<F1>') == '') )
+	map  <F1> <Plug>ShowFunc
+  map! <F1> <Plug>ShowFunc
+elseif ( !hasmapto('<PLUG>ShowFunc') )
+  if ( !has("gui_running") || has("win32") )
+    echo confirm ("ShowFunc Error: No Key mapped.\n".
+      \           "<F1> is taken and a replacement was not assigned.\n",
+      \           "&ok", 0, "Warning")
+  endif
+  let g:loaded_showfunc=0
+  finish
+endif
+noremap  <silent> <Plug>ShowFunc   :call <SID>ShowFuncOpen()<CR>
+noremap! <silent> <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
+
+" Cwindow specific key mappings can be found in the OpenCWinfunction.
+" ------------------------------------------------------------------------------
+" Known Issues:
+" 1.  Error messages that occur as gvim is loading (on Linux) do not display in 
+"     GUI windows.  When called from a menu or icon, it appears that gvim is hung
+"     (it appears in the ps listings but no window appears).  To avoid this I 
+"     have disabled the display of errors during gvim loading and the ShowFunc 
+"     script simply exits.  
 " ------------------------------------------------------------------------------
 " Feature Wishlist:
 " 1.  If scan is set to "current", make cwindow update on buffer change (except
@@ -377,5 +480,9 @@ endfunction
 " 1.4.3    03-15-2003  Automatically fold output on filename for multiple file
 "                      scans (all buffers or windows).
 " 1.4.4    03-17-2003  Improved error handling.  Improved SetFoldText().
+" 1.4.5    04-01-2003  More error handling improvements, including tests for the 
+"                      correct version of ctags, and keymap assignment.  Thanks
+"                      to Mark Thomas for his assistance in finding and fixing a
+"                      bug in the executable detection on Windows.  
 " ------------------------------------------------------------------------------
 " vim: tw=80 ts=2 sw=2
