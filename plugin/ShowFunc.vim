@@ -1,7 +1,7 @@
 " ------------------------------------------------------------------------------ 
 " Filename:      ~/.vim/plugin/ShowFunc.vim
 " Version:       1.1
-" Last Modified: 26 Aug 2002 22:18:20 by Dave V.
+" Last Modified: 26 Aug 2002 22:30:13 by Dave V.
 " Maintainer:    Dave Vehrs (davev at ziplip.com) 
 " Install:       Put this file in the vim plugins directory to load it 
 "                automatically, or load it with :so ShowFunc.vim 
@@ -14,7 +14,7 @@
 "                (http://ctags.sourceforge.net/). 
 " WARNING:       It may write the file as a side effect. 
 " Requires:      Vim 6.0 or newer. 
-" Supported File types: 
+" Supported File Types: 
 "  For Classes     - Java ,Python 
 "  For Functions   - Awk, C, C++, Fortran, Lisp, Pascal, PHP, Python, Ruby, 
 "                    Shell Scripts, Scheme, Slang, and Vim 
@@ -71,13 +71,13 @@ function! ShowFunc(sort)
     let &grepprg = 'ctags -x --make-types=m --sort='.a:sort
   elseif ( &filetype == "pascal"  )
     let &grepformat = '%*\k%*\s\(function\|procedure\)%*\s%l%*\s%f %m'
-    let &grepprg = 'ctags -x --'.&filetype.'-types=fs --sort='.a:sort
+    let &grepprg = 'ctags -x --'.&filetype.'-types=fp --sort='.a:sort
 	elseif ( &filetype == "perl" || &filetype == "rexx" )
     let &grepformat = '%*\k%*\ssubroutine%*\s%l%*\s%f %m'
     let &grepprg = 'ctags -x --'.&filetype.'-types=s --sort='.a:sort
   elseif ( &filetype == "python"  )
     let &grepformat = '%*\k%*\s\(class\|function\)%*\s%l%*\s%f %m'
-    let &grepprg = 'ctags -x --'.&filetype.'-types=fs --sort='.a:sort
+    let &grepprg = 'ctags -x --'.&filetype.'-types=cf --sort='.a:sort
   elseif ( &filetype == "vim" )
     let &grepformat = '%*\k%*\sfunction%*\s%l%*\s%f %m'
     let &grepprg = 'ctags -x --vim-types=f --language-force=vim --sort='.a:sort
@@ -105,4 +105,11 @@ function! ShowFunc(sort)
   let &grepformat = gf_s
   let &grepprg = gp_s
 endfunc
+
+" ------------------------------------------------------------------------------ 
+" Version History
+" ------------------------------------------------------------------------------ 
+" 1.0  08-24-2002  Initial Release.  
+" 1.1  08-26-2002  Patches to Fortran (thanks to Ajit Thakkar), Pascal, 
+"                  and Python support.     
 " ------------------------------------------------------------------------------ 
