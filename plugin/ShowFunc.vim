@@ -1,13 +1,10 @@
 " ------------------------------------------------------------------------------
-" Filename:      ~/.vim/plugin/ShowFun
+" Filename:      ~/.vim/plugin/ShowFunc.vim
 " VimScript:     #397
-" Last Modified: 21 Dec 2002 05:41:49 PM by Dave V.
+" Last Modified: 19 Jan 2003 06:58:55 PM by Dave V.
 " Maintainer:    Dave Vehrs (davev at ziplip.com)
-" Copyright:     (C) 2001,2002 Dave Vehrs
+" Copyright:     (C) 2002 Dave Vehrs
 "                Distributed under the terms of the GNU General Public License 
-" Install:       Put this file in the vim plugins directory (~/.vim/plugin)
-"                to load it automatically, or load it manually with
-"                :so ShowFunc.vim.
 " Description:   This script creates a hyper link list of all the functions,
 "                subroutines, classes, macros or procedures in a  single file or
 "                all currently open windows and displays them in a dynamically
@@ -17,116 +14,88 @@
 " WARNING:       It may write the file as a side effect.
 " Requires:      Vim 6.0 or newer.
 "                Exuberant ctags (http://ctags.sourceforge.net/).
-" Supported File Types:
-"  For Classes     - Java
-"  For Functions   - Awk, C, C++, Fortran, Lisp, Pascal, PHP, Python, Ruby,
-"                    Shell Scripts, Scheme, Slang, and Vim
-"  For Macros      - Makefiles
-"  For Procedures  - Expect, Pascal, and Tcl
-"  For Subroutines - Fortran, Perl and Rexx
+" Install:       Put this file in the vim plugins directory (~/.vim/plugin)
+"                to load it automatically, or load it manually with
+"                :so ShowFunc.vim.
 "                                             Additional notes at end of file...
 " ------------------------------------------------------------------------------
-
 " Exit if already loaded.
-if ( exists("loaded_showfunc") || &cp )
-  finish
-endif
+if ( exists("loaded_showfunc") || &cp ) | finish | endif
 let loaded_showfunc=1
 
 " Enable filetype detection
 filetype on
-
 " ------------------------------------------------------------------------------
-" Defaults
+" Default ScanType Options:   buffers  |  Scan all open buffers.
+"                             current  |  Scan only the current buffer.
+"                             windows  |  Scan all open windows.
+if !exists("g:ShowFuncScanType") | let g:ShowFuncScanType = "buffers" | endif
 
-" ScanType
-" Options:
-"  buffers  |  Scan all open buffers.
-"  current  |  Scan only the current buffer.
-"  windows  |  Scan all open windows.
-if !exists("g:ShowFuncScanType")
-  let g:ShowFuncScanType = "buffers"
-endif
-
-" SortType
-" Options:
-"  yes  |  Display output sorted alphabetically.
-"  no   |  Display output in file order. 
-if !exists("g:ShowFuncSortType")
-  let g:ShowFuncSortType = "no"
-endif
-
+" Default SortType Options:   yes  |  Display output sorted alphabetically.
+"                             no   |  Display output in file order. 
+if !exists("g:ShowFuncSortType") | let g:ShowFuncSortType = "yes" | endif
 " ------------------------------------------------------------------------------
-" Key Mappings
-
-" To change the key mapping, add this to your .vimrc file:
+" To change the main key mapping, add this to your .vimrc file:
 "   map <key> <PLug>ShowFunc
-" For example to map <F7>:
-"   map <F7> <Plug>ShowFunc
 
-if !hasmapto('<PLUG>ShowFunc') && (maparg('<F1>') == '')
-		map  <F1> <Plug>ShowFunc
-	  map! <F1> <Plug>ShowFunc
+if !hasmapto('<PLUG>ShowFuncMain') && (maparg('<F1>') == '')
+	map  <F1> <Plug>ShowFuncMain
+  map! <F1> <Plug>ShowFuncMain
 endif
-noremap  <Plug>ShowFunc   :call <SID>ShowFuncOpen()<CR>
-noremap! <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
+noremap  <silent> <Plug>ShowFuncMain   :call <SID>ShowFuncOpen()<CR>
+noremap! <silent> <Plug>ShowFuncMain   <ESC>:call <SID>ShowFuncOpen()<CR>
 
-" Key mappings for scan sort and type can be found in the OpenCWin function,
-" this is so that they are just associated with the cwindow only.  
-
+" Close, refresh, scan-sort and -type key mappings can be found in the OpenCWin
+" function (this is to insure that they are associated with only the cwindow).
 " ------------------------------------------------------------------------------
-" Functions
-
-" Function ChangeScanType
-function! <sid>ChangeScanType()
-	if g:ShowFuncScanType == "buffers"
-  	let g:ShowFuncScanType = "windows"
-	elseif g:ShowFuncScanType == "windows"
-  	let g:ShowFuncScanType = "current"
-	elseif g:ShowFuncScanType == "current"
-  	let g:ShowFuncScanType = "buffers"
+function! <SID>ChangeScanType() 
+	if g:ShowFuncScanType == "buffers"     | let g:ShowFuncScanType = "windows"
+	elseif g:ShowFuncScanType == "windows" | let g:ShowFuncScanType = "current" 
+	elseif g:ShowFuncScanType == "current" | let g:ShowFuncScanType = "buffers"
   endif
 	call <SID>ShowFuncOpen()
 endfunction
 
-" Function ChangeSortType
-" Note:  Scanning the only the current window was removed from this function 
-"        because it only works if it was called as the default for ShowFuncOpen.
 function! <SID>ChangeSortType()
-	if g:ShowFuncSortType == "no"
-  	let g:ShowFuncSortType = "yes"
-	elseif g:ShowFuncSortType == "yes"
-  	let g:ShowFuncSortType = "no"
-	endif
+	if g:ShowFuncSortType == "no"       | let g:ShowFuncSortType = "yes"
+	elseif g:ShowFuncSortType == "yes"  | let g:ShowFuncSortType = "foldcase" 
+	elseif g:ShowFuncSortType == "foldcase"  | let g:ShowFuncSortType = "no" 
+  endif
 	call <SID>ShowFuncOpen()
 endfunction
 
-" Function: OpenCWin
-" Determines correct height for the cwindow and opens it.
-function! s:OpenCWin()
-	  if ( &lines < 60 && &lines-2 != winheight(0) )
-	    exe 'belowright copen '.&lines/8
-	  elseif ( &lines < 60 )
-	    exe 'belowright copen '.&lines/4
-		else
-		  belowright copen 15
-	  endif
-		let cwin_filelen = line("$")
-	  if ( cwin_filelen == 0 )
-		  echomsg "ShowFunc: no tags found."
-		  return
-	  elseif ( cwin_filelen < winheight(0) )
-	    cclose
-	    exe 'belowright copen '.cwin_filelen
-	  endif
-		" Set Scan sort and type mappings
-    nnoremap <buffer> <silent> t :call <SID>ChangeScanType()<CR>
-    nnoremap <buffer> <silent> s :call <SID>ChangeSortType()<CR>
-		return
+function! <SID>DisplayHelp()
+  echo confirm ("ShowFunc Help:          \n".
+    \           " c  Close                   \n".
+    \           " r  Refresh                 \n". 
+    \           " s  Change Scan Sort  \n".
+    \           " t  Change Scan Type \n",
+    \           "&ok", 0, "Info")
 endfunction
 
-" Function: SetGrepFormat
-" Returns grep format based on filetype.
+function! s:OpenCWin()
+  let l:mod_total = 0
+  let l:win_count = 1
+	windo let l:win_count =  l:win_count + 1
+  if ( l:win_count <= 2 ) | let l:win_count = 4 | endif
+  windo let l:mod_total = l:mod_total + winheight(0)/l:win_count | 
+   \ execute 'resize +'.l:mod_total
+  execute 'belowright copen '.l:mod_total   
+	let l:cwin_filelen = line("$")
+  if ( l:cwin_filelen < winheight(0) )
+    cclose
+    execute 'belowright copen '.l:cwin_filelen
+  endif
+  " Set close, refresh, scan-sort and -type mappingsa
+  nnoremap <buffer> <silent> c :cclose<CR>
+  nnoremap <buffer> <silent> h :call <SID>DisplayHelp()<CR>
+  nnoremap <buffer> <silent> r :call <SID>ShowFuncOpen()<CR>
+  nnoremap <buffer> <silent> s :call <SID>ChangeSortType()<CR>
+  nnoremap <buffer> <silent> t :call <SID>ChangeScanType()<CR>
+  set nobuflisted
+  return
+endfunction
+
 function! s:SetGrepFormat()
   if ( &filetype == "awk" || &filetype == "c" || &filetype == "lisp" ||
 		 \ &filetype == "php" || &filetype == "python" || &filetype == "ruby" ||
@@ -149,15 +118,14 @@ function! s:SetGrepFormat()
 	elseif ( &filetype == "perl" || &filetype == "rexx" )
     return '%*\k%*\ssubroutine%*\s%l%*\s%f %m'
   elseif ( &filetype == "vim" )
-    return '%*\k%*\sfunction%*\s%l%*\s%f %m,'.
+    " I am currently working on a patch to exuberant ctags to add augroup to 
+    " the list of vim types.
+    return '%*\k%*\saugroup%*\s%l%*\s%f %m,'.
+         \ '%*\k%*\sfunction%*\s%l%*\s%f %m,'.
          \ '%*\k%*\svariable%*\s%l%*\s%f %m'
-  else
-	  return "fail"
-	endif
+  else | return "fail" | endif
 endfunction
 
-" Function: SetGrepPrg
-" Returns configured ctags command based on filetype.
 function! s:SetGrepPrg(sort)
   if ( &filetype == "awk" || &filetype == "c" || &filetype == "lisp" ||
 		 \ &filetype == "php" || &filetype == "python" || &filetype == "ruby" ||
@@ -179,70 +147,66 @@ function! s:SetGrepPrg(sort)
     return 'ctags -x --'.&filetype.'-types=s --sort='.a:sort
   elseif ( &filetype == "vim" )
     return 'ctags -x --language-force=vim --sort='.a:sort
-  else
-	  return "fail"
-	endif
+  else | return "fail" | endif
 endfunction
 
-"Function ShowFuncOpen
 function! <SID>ShowFuncOpen()
 	set lazyredraw
-	let currbuf = bufnr("%")
-	let currwin = winnr()
 	cclose
   if ( &lines >= 8 )
-    let gf_s = &grepformat
-    let gp_s = &grepprg
+		let l:count = 0
+    let l:gf_s = &grepformat
+    let l:gp_s = &grepprg
     set grepformat&vim
     set grepprg&vim
 		if ( g:ShowFuncScanType == "buffers" )
       " Scan all open buffers.
-		  let s:count = 0
+	    let l:currbuf = bufnr("%")
 	    bufdo! let &grepformat = s:SetGrepFormat() | let &grepprg =
 		    \ s:SetGrepPrg(g:ShowFuncSortType) | if ( &grepformat != "fail" && 
 				\ &grepprg != "fail" )| if ( &readonly == 0 ) | update | endif | 
-				\ if ( s:count == 0 ) | silent! grep % | let s:count =  s:count + 1 |
-				\ else | silent! grepa % | endif | endif
+				\ if ( l:count == 0 ) | silent! grep! % | let l:count =  l:count + 1 |
+				\ else | silent! grepadd! % | endif | endif
+		  execute 'buffer '.l:currbuf
 		elseif ( g:ShowFuncScanType == "windows" )
 		  " Scan all open windows.
-		  let s:count = 0
-	    windo! let &grepformat = s:SetGrepFormat() | let &grepprg =
+	    windo let &grepformat = s:SetGrepFormat() | let &grepprg =
 		    \ s:SetGrepPrg(g:ShowFuncSortType) | if ( &grepformat != "fail" && 
 				\ &grepprg != "fail" )| if ( &readonly == 0 ) | update | endif |
-				\ if ( s:count == 0 ) | silent! grep % | let s:count =  s:count + 1 |
-				\ else | silent! grepa % | endif | endif	
+				\ if ( l:count == 0 ) | silent! grep! %| let l:count =  l:count + 1 |
+				\ else | silent! grepadd! % | endif | endif	
 		elseif ( g:ShowFuncScanType == "current" )
-		  " Scan current buffer only. 
+		  " Scan current buffer only.
   	  let &grepformat = s:SetGrepFormat()
       let &grepprg = s:SetGrepPrg(g:ShowFuncSortType)
 		  if ( &grepformat != "fail" && &grepprg != "fail" )
         if ( &readonly == 0 ) | update | endif
-        silent! grep %
-		  else
-			  echomsg "ShowFunc Error: Unknown FileType")
-		  endif
+        silent! grep! %
+		  else | echomsg "ShowFunc Error: Unknown FileType" | endif
 		endif
-	  let &grepformat = gf_s
-    let &grepprg = gp_s
-		  execute currwin.' wincmd w'
-		  execute 'buffer '.currbuf
+	  let &grepformat = l:gf_s
+    let &grepprg = l:gp_s
 		execute s:OpenCWin()
-	else
-		echomsg "ShowFunc Error: Window too small."
-	endif
+	else  | echomsg "ShowFunc Error: Window too small." | endif
 	set nolazyredraw
 	redraw!
 endfunction
-
 " ------------------------------------------------------------------------------
-" Feature Wishlist
+" Feature Wishlist:
 " 1.  Improved Multiple file handling.  I would like to open the files as folds
 "     in the cwindow.
 " 2.  Multiple tag support.  It would be nice to support all the filetypes that
 "     ctags does and to support all the tag types too.  Currently experimenting
-"     with vim functions and variables.  
+"     with vim functions and variables. 
+" 3.  If scan is set to "current", make cwindow update on buffer change (except
+"     to the cwindow)
+" 4.  Some sort of help dialog.  A custom statusline for the cwindow would be an
+"     ideal place to start.  Something like "ShowFunc:   Press 'h' for help". 
+" 5.  When ShowFunc opens, the other windows size ratios remain roughly the
+"     same, however when you close the cwindow, the other windows all become
+"     equal in height (just as if ctrl-W = had been pushed)
 " ------------------------------------------------------------------------------
-" Version History
+" Version History:
 " 1.0      08-24-2002  Initial Release.
 " 1.1      08-26-2002  Patches to Fortran (thanks to Ajit Thakkar), Pascal,
 "                      and Python support.
@@ -251,12 +215,13 @@ endfunction
 " 1.1.3    08-31-2002  Fixed Fortran and Pascal patches, Thanks to Ajit Thakkar,
 "                      and Engelbert Gruber.
 " 1.2      09-22-2002  Fixed redraw bug so that it works with the Winmanager
-"                      (vimscript#95) and Bufexplorer (vimscript#42) scripts.
-" 1.2.1    10-17-2002  Added unknown filetype handling. Added status messages
+"                      ndow scan display issue. Improved dynamic 
+  "                      cwindow sizing.  Added basic help dialog(vimscript#95) and Bufexplorer (vimscript#42) scripts.
+" 1.2.1    10-17-2002  dde unknown filetype handling. Added status messages
 "                      ('ShowFunc:').  Fixed key-mappings.
 " 1.3Beta  11-16-2002  Beta: Multiple file handling.  Restructured script.
 " 1.3Beta2 11-20-2002  Beta: Fixed Multiple file cwindow refresh issue (grep
-"                      vs. grepa).
+"                      vs. grepadd).
 " 1.3Beta3 11-29-2002  Beta: Split SetFileType into two ( SetGrepFormat, and
 "                      SetGrepPrg ). Set &...&vim to  insure proper '\ multiline
 "                      translation. Added keymapping testing to  protect against
@@ -270,5 +235,8 @@ endfunction
 "                      Pressing F1 runs the default scan, and opens the cwindow.
 "                      Scan sort and type can be changed by pressing the s and t
 "                      keys respectively.  Unifed scan types into one function 
-"                      (ShowFuncOpen) and bought back the all open windows scan.  
+"                      (ShowFuncOpen) and bought back the all open windows scan.
+" 1.4.1    01-19-2003  Fixed multi-window scan display issue. Improved dynamic 
+"                      cwindow sizing.  Added basic help dialog.    
 " ------------------------------------------------------------------------------
+" vim: tw=80 ts=2 sw=2
