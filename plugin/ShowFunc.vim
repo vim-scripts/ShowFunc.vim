@@ -1,9 +1,9 @@
 " ------------------------------------------------------------------------------
-" Filename:      ~/.vim/plugin/ShowFunc.vim
+" Filename:      ShowFunc.vim
 " VimScript:     #397
-" Last Modified: 06 Oct 2003 10:33:21 PM by Dave Vehrs
+" Last Modified: 15 Oct 2004 04:04:26 PM by Dave Vehrs
 " Maintainer:    Dave Vehrs (davev at ziplip.com)
-" Copyright:     (C) 2002-2003 Dave Vehrs
+" Copyright:     (C) 2002-2004 Dave Vehrs
 "                This script is free software; you can redistribute it and/or 
 "                modify it under the terms of the GNU General Public License as 
 "                published by the Free Software Foundation; either version 2 of 
@@ -22,12 +22,13 @@
 "                :so ShowFunc.vim.
 "                                             Additional notes at end of file...
 " ------------------------------------------------------------------------------
-" Exit if already loaded. 
+" Exit if already loaded.                                                    {{{
 if ( exists("loaded_showfunc") || &cp ) | finish | endif 
 let g:loaded_showfunc=1 
 			 
 " Enable filetype detection 
 filetype on
+"                                                                            }}}
 " ------------------------------------------------------------------------------
 " Configuration:                                                             {{{
 " Test for and if necessary configure all default settings.  If you would like
@@ -220,7 +221,7 @@ function! s:ShowFuncFolds()
 endfunction
 
 " Set FoldText to filename and tag count.
-function! ShowFuncText()
+function! ShowFuncFoldText()
   let l:line = ""
   let l:textwidth = &textwidth - 20
   let l:line = getline(v:foldstart)
@@ -410,6 +411,10 @@ noremap! <silent> <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
 " 4.  Expand error format format so that the tag type is grabbed by grep.
 "                                                                            }}}
 " ------------------------------------------------------------------------------
+" Notes:                                                                     {{{
+" 1. Best veiwed with AutoFold (vimscript#925).
+"                                                                            }}}
+" ------------------------------------------------------------------------------
 " Version History:                                                           {{{
 " 1.0      08-24-2002  Initial Release.
 " 1.1      08-26-2002  Patches to Fortran (thanks to Ajit Thakkar), Pascal,
@@ -461,6 +466,7 @@ noremap! <silent> <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
 "                      regular expressions (--regex-<LANG>).  
 " 1.5.1   09-25-2003   Bug Fixes.
 " 1.5.2   10-06-2003   Improved Exuberant Ctags version checking.  
+" 1.5.3   10-15-2004   Fixed ShowFuncFoldText.
 "                                                                            }}}
 " ------------------------------------------------------------------------------
 " vim:tw=80:ts=2:sw=2:
