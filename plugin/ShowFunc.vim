@@ -1,6 +1,6 @@
 " ------------------------------------------------------------------------------ 
 " Filename:      ~/.vim/plugin/ShowFunc.vim
-" Last Modified: 22 Sep 2002 23:06:25 by Dave V.
+" Last Modified: 17 Oct 2002 06:19:52 PM by Dave V.
 " Maintainer:    Dave Vehrs (davev at ziplip.com) 
 " Install:       Put this file in the vim plugins directory to load it 
 "                automatically, or load it with :so ShowFunc.vim 
@@ -35,10 +35,12 @@ filetype on
 " ---------- 
 " Mappings 
 
-" List in order they appear in the file. 
-noremap <F3>   <ESC>:call ShowFunc("no")<CR><ESC> 
+" List in file order.
+map  <F3>   :call ShowFunc("no")<CR>
+map! <F3>   <ESC>:call ShowFunc("no")<CR>
 " List in alphabetical order. 
-noremap <S-F3> <ESC>:call ShowFunc("yes")<CR><ESC> 
+map  <F4> :call ShowFunc("yes")<CR>
+map! <F4> <ESC>:call ShowFunc("yes")<CR>
 				  
 " ---------- 
 " Function: ShowFunc 
@@ -48,7 +50,7 @@ function! ShowFunc(sort)
   let gf_s = &grepformat
   let gp_s = &grepprg
 	set lazyredraw
-	cclose 
+	cclose
   if ( &filetype == "awk" || &filetype == "c" || &filetype == "lisp" || 
 		 \ &filetype == "php" || &filetype == "python" || &filetype == "ruby" ||
 		 \ &filetype == "scheme" || &filetype == "sh" ||  &filetype == "slang" )
@@ -80,48 +82,63 @@ function! ShowFunc(sort)
   elseif ( &filetype == "vim" )
     let &grepformat = '%*\k%*\sfunction%*\s%l%*\s%f %m'
     let &grepprg = 'ctags -x --vim-types=f --language-force=vim --sort='.a:sort
-  endif
+  else 
+    let &grepformat = gf_s
+    let &grepprg = gp_s
+	  set nolazyredraw
+	  redraw!
+		echomsg "ShowFunc Error: Unknown Filetype"
+	  return
+	endif
   if ( &readonly == 0 ) | update | endif
   silent! grep %
+  let &grepformat = gf_s
+  let &grepprg = gp_s
 	if ( winheight(0) < 5 )
-		" too small exit
-		finish
+	  set nolazyredraw
+	  redraw!
+		echomsg "ShowFunc Error: Window too small, canceling"
+		return
 	elseif ( winheight(0) < 60 )
-    exe 'belowright copen '.winheight(0)/4
-	else
+	  exe 'belowright copen '.winheight(0)/4
+	else 
 		belowright copen 15
 	endif
-	let cwin_filelen = line("$") + 1
+	let cwin_filelen = line("$")
 	if ( cwin_filelen == 0 )
-		cclose
-		copen 1
+		set nolazyredraw
+		redraw!
+		echomsg "ShowFunc: no tags found."
+		return
 	elseif ( cwin_filelen < winheight(0) )
-		cclose
-    exe 'belowright copen '.cwin_filelen
+	  cclose
+	  exe 'belowright copen '.cwin_filelen
 	endif 
 	set nolazyredraw
 	redraw!
-  let &grepformat = gf_s
-  let &grepprg = gp_s
-endfunc
-" ------------------------------------------------------------------------------ 
+	return
+endfunction
+
+" ------------------------------------------------------------------------------
 " Version History
-" ------------------------------------------------------------------------------ 
-" 1.0   08-24-2002  Initial Release.  
-" 1.1   08-26-2002  Patches to Fortran (thanks to Ajit Thakkar), Pascal, 
-"                   and Python support.     
+" ------------------------------------------------------------------------------
+" 1.0   08-24-2002  Initial Release.
+" 1.1   08-26-2002  Patches to Fortran (thanks to Ajit Thakkar), Pascal,
+"                   and Python support.
 " 1.1.1 08-26-2002  Fixed copy&paste errors.  ooops.
 " 1.1.2 08-27-2002  Removed the Python patch.
 " 1.1.3 08-31-2002  Fixed Fortran and Pascal patches, Thanks to Ajit Thakkar,
 "                   and Engelbert Gruber.
-" 1.2   09-22-2002  Fixed redraw bug so that it works with the winmanager 
-"                   plugin (vimscript#95).
+" 1.2   09-22-2002  Fixed redraw bug so that it works with the Winmanager
+"                   (vimscript#95) and Bufexplorer (vimscript#42) scripts.
+" 1.2.1 10-17-2002  Added unknown filetype handling. Added status messages 
+"                   ('ShowFunc:').  Fixed key-mappings.
 " ------------------------------------------------------------------------------
 " Feature Wishlist
-" ------------------------------------------------------------------------------ 
-" 1.  Multiple file handling.  I would like to open multiple files as folds in 
-"     the cwindow.  Current file expanded by default.  Needs to autoupdate as 
-"     new files are loaded or active window changes.  
-" 2.  Unknown filetype handling, some kind of handling....any kind.
+" ------------------------------------------------------------------------------
+" 1.  Multiple file handling.  I would like to open multiple files as folds in
+"     the cwindow.  Current file expanded by default.  Needs to autoupdate as
+"     new files are loaded or active window changes.
+" 2.
 " 3.
 " ------------------------------------------------------------------------------
