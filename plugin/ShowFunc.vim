@@ -1,7 +1,6 @@
 " ------------------------------------------------------------------------------ 
 " Filename:      ~/.vim/plugin/ShowFunc.vim
-" Version:       1.1.1
-" Last Modified: 02 Sep 2002 12:45:59 by Dave V.
+" Last Modified: 22 Sep 2002 23:06:25 by Dave V.
 " Maintainer:    Dave Vehrs (davev at ziplip.com) 
 " Install:       Put this file in the vim plugins directory to load it 
 "                automatically, or load it with :so ShowFunc.vim 
@@ -48,8 +47,8 @@ noremap <S-F3> <ESC>:call ShowFunc("yes")<CR><ESC>
 function! ShowFunc(sort)
   let gf_s = &grepformat
   let gp_s = &grepprg
+	set lazyredraw
 	cclose 
-	redraw
   if ( &filetype == "awk" || &filetype == "c" || &filetype == "lisp" || 
 		 \ &filetype == "php" || &filetype == "python" || &filetype == "ruby" ||
 		 \ &filetype == "scheme" || &filetype == "sh" ||  &filetype == "slang" )
@@ -88,24 +87,23 @@ function! ShowFunc(sort)
 		" too small exit
 		finish
 	elseif ( winheight(0) < 60 )
-	   exe 'copen '.winheight(0)/4
+    exe 'belowright copen '.winheight(0)/4
 	else
-		copen 15
+		belowright copen 15
 	endif
-  redraw
 	let cwin_filelen = line("$") + 1
 	if ( cwin_filelen == 0 )
+		cclose
 		copen 1
 	elseif ( cwin_filelen < winheight(0) )
 		cclose
-		redraw
-    exe 'copen '.cwin_filelen
+    exe 'belowright copen '.cwin_filelen
 	endif 
-	redraw
+	set nolazyredraw
+	redraw!
   let &grepformat = gf_s
   let &grepprg = gp_s
 endfunc
-
 " ------------------------------------------------------------------------------ 
 " Version History
 " ------------------------------------------------------------------------------ 
@@ -114,6 +112,16 @@ endfunc
 "                   and Python support.     
 " 1.1.1 08-26-2002  Fixed copy&paste errors.  ooops.
 " 1.1.2 08-27-2002  Removed the Python patch.
-" 1.1.3 08-31-2002  Fixed Fortran and Pascal patches, Thanks the Ajit Thakkar,
-"                   and Engelbert Gruber.  
+" 1.1.3 08-31-2002  Fixed Fortran and Pascal patches, Thanks to Ajit Thakkar,
+"                   and Engelbert Gruber.
+" 1.2   09-22-2002  Fixed redraw bug so that it works with the winmanager 
+"                   plugin (vimscript#95).
+" ------------------------------------------------------------------------------
+" Feature Wishlist
 " ------------------------------------------------------------------------------ 
+" 1.  Multiple file handling.  I would like to open multiple files as folds in 
+"     the cwindow.  Current file expanded by default.  Needs to autoupdate as 
+"     new files are loaded or active window changes.  
+" 2.  Unknown filetype handling, some kind of handling....any kind.
+" 3.
+" ------------------------------------------------------------------------------
