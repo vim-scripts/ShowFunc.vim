@@ -1,0 +1,22 @@
+This is a mirror of http://www.vim.org/scripts/script.php?script_id=397
+
+This script creates a hyperlink list of all the tags (i.e. functions, subroutines, classes, macros or procedures) from a single buffer, all open windows or buffers and displays them in a dynamically sized cwindow.
+
+Supported File types with Exuberant Ctags version 5.5.4 (and newer):  Asm, Asp, Awk, Beta, C, C++, c#, Cobol, Eiffel, Erlang, Fortran, Java, Javascript, Lisp, Lua, Make, Pascal, Perl, PHP, Python, PL/SQL,  REXX, Ruby, Scheme, Shell, SLang, SML, SQL, Tcl, Vera, Verilog, Vim, YACC......and any user defined (i.e. --regex-lang=) types. 
+
+Default Key Mappings:
+<F1>    Run scan and open cwindow.
+              
+To reassign add the following to your .vimrc:
+      map  NewKey   <Plug>ShowFunc
+      map! NewKey   <Plug>ShowFunc
+For example to change the <F1> mapping to <F7>
+      map  <F7>   <Plug>ShowFunc
+      map! <F7>   <Plug>ShowFunc
+
+ShowFunc Window commands:
+c       Close cwindow.
+h       Display help dialog.
+r        Refresh.
+s       Change file sort, results will appear in either alphabetical or file order.  (Default: file order)
+t       Change scan type, results will be from either the current file, all open windows or all open buffers.  (Default: all open buffers)
