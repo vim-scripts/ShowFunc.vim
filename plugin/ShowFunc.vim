@@ -1,7 +1,7 @@
 " ------------------------------------------------------------------------------
 " Filename:      ~/.vim/plugin/ShowFunc.vim
 " VimScript:     #397
-" Last Modified: 21 Sep 2003 11:51:19 AM by Dave Vehrs
+" Last Modified: 21 Sep 2003 08:15:50 PM by Dave Vehrs
 " Maintainer:    Dave Vehrs (davev at ziplip.com)
 " Copyright:     (C) 2002-2003 Dave Vehrs
 "                This script is free software; you can redistribute it and/or 
@@ -325,16 +325,15 @@ else
   let g:showfuncctagsbin = s:CtagsTest("unk")
 endif
 
-" Define default supportted file types list.
-if !exists("g:CTags_Supported_FileTypes")
-  let g:CTags_Supported_FileTypes = strtrans(system(g:showfuncctagsbin .
-    \ "-x --list-languages"))
-endif
-
 " Determine Ctags version.
 let teststring = strtrans(system(g:showfuncctagsbin . " -x --version"))
 let g:CtagsVersion = strpart(teststring,(stridx(teststring,".")+1),
   \ ((stridx(teststring,",")-(stridx(teststring,"." )+1))))
+
+" Define default supportted file types list.
+if ( !exists("g:CTags_Supported_FileTypes") && g:CtagsVersion == 5 )
+  let g:CTags_Supported_FileTypes = strtrans(system(g:showfuncctagsbin." -x --list-languages"))
+endif
 
 if ( g:showfuncctagsbin == "fail" )
   " echo confirm ("Failed: ".g:showfuncctagsbin,"&ok",0,"Warning")
