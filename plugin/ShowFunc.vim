@@ -1,7 +1,7 @@
 " ------------------------------------------------------------------------------ 
 " Filename:      ~/.vim/plugin/ShowFunc.vim
-" Version:       1.0 
-" Last Modified: 24 Aug 2002 17:45:01 by Dave V.
+" Version:       1.1
+" Last Modified: 26 Aug 2002 22:18:20 by Dave V.
 " Maintainer:    Dave Vehrs (davev at ziplip.com) 
 " Install:       Put this file in the vim plugins directory to load it 
 "                automatically, or load it with :so ShowFunc.vim 
@@ -11,17 +11,16 @@
 "                file types. 
 " History:       This script grew from an idea posted by Flemming Madsen, on 
 "                http://vim.sourceforge.net/tips/tip.php?tip_id=79. 
-" Note:          You need Exuberant CTags installed for this to work 
 "                (http://ctags.sourceforge.net/). 
 " WARNING:       It may write the file as a side effect. 
 " Requires:      Vim 6.0 or newer. 
 " Supported File types: 
-"  For Classes     - Java 
+"  For Classes     - Java ,Python 
 "  For Functions   - Awk, C, C++, Fortran, Lisp, Pascal, PHP, Python, Ruby, 
 "                    Shell Scripts, Scheme, Slang, and Vim 
 "  For Macros      - Makefiles 
-"  For Procedures  - Expect, and Tcl 
-"  For Subroutines - Perl and Rexx 
+"  For Procedures  - Expect, Pascal, and Tcl 
+"  For Subroutines - Fortran, Perl and Rexx 
 " ------------------------------------------------------------------------------ 
 
 " Exit if already loaded. 
@@ -50,10 +49,9 @@ function! ShowFunc(sort)
   let gp_s = &grepprg
 	cclose 
 	redraw
-  if ( &filetype == "awk" || &filetype == "c" || &filetype == "fortran" ||
-		 \ &filetype == "lisp" || &filetype == "pascal" || &filetype == "php" || 
-		 \ &filetype == "python" || &filetype == "ruby" || &filetype == "scheme" ||
-		 \ &filetype == "sh" || &filetype == "slang" )
+  if ( &filetype == "awk" || &filetype == "c" || &filetype == "lisp" || 
+		 \ &filetype == "php" || &filetype == "ruby" || &filetype == "scheme" ||
+		 \ &filetype == "sh" ||  &filetype == "slang" )
     let &grepformat = '%*\k%*\sfunction%*\s%l%*\s%f %m'
     let &grepprg = 'ctags -x --'.&filetype.'-types=f --sort='.a:sort
   elseif ( &filetype == "cpp"  )
@@ -62,15 +60,24 @@ function! ShowFunc(sort)
   elseif ( &filetype == "expect" || &filetype == "tcl" )
     let &grepformat = '%*\k%*\sproc%*\s%l%*\s%f %m'
     let &grepprg = 'ctags -x --language-force=tcl --sort='.a:sort
+  elseif ( &filetype == "fortran"  )
+    let &grepformat = '%*\k%*\s\(function\|subroutine\)%*\s%l%*\s%f %m'
+    let &grepprg = 'ctags -x --'.&filetype.'-types=fs --sort='.a:sort
   elseif ( &filetype == "java" ) 
     let &grepformat = '%*\k%*\sclass%*\s%l%*\s%f %m' 
     let &grepprg = 'ctags -x --java-types=c --sort='.a:sort 
 	elseif ( &filetype == "make" )
     let &grepformat= '%*\k%*\smacro%*\s%l%*\s%f %m'
     let &grepprg = 'ctags -x --make-types=m --sort='.a:sort
+  elseif ( &filetype == "pascal"  )
+    let &grepformat = '%*\k%*\s\(function\|procedure\)%*\s%l%*\s%f %m'
+    let &grepprg = 'ctags -x --'.&filetype.'-types=fs --sort='.a:sort
 	elseif ( &filetype == "perl" || &filetype == "rexx" )
     let &grepformat = '%*\k%*\ssubroutine%*\s%l%*\s%f %m'
     let &grepprg = 'ctags -x --'.&filetype.'-types=s --sort='.a:sort
+  elseif ( &filetype == "python"  )
+    let &grepformat = '%*\k%*\s\(class\|function\)%*\s%l%*\s%f %m'
+    let &grepprg = 'ctags -x --'.&filetype.'-types=fs --sort='.a:sort
   elseif ( &filetype == "vim" )
     let &grepformat = '%*\k%*\sfunction%*\s%l%*\s%f %m'
     let &grepprg = 'ctags -x --vim-types=f --language-force=vim --sort='.a:sort
