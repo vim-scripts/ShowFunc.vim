@@ -1,7 +1,7 @@
 " ------------------------------------------------------------------------------ 
 " Filename:      ~/.vim/plugin/ShowFunc.vim
-" Version:       1.1
-" Last Modified: 26 Aug 2002 22:30:13 by Dave V.
+" Version:       1.1.1
+" Last Modified: 02 Sep 2002 12:45:59 by Dave V.
 " Maintainer:    Dave Vehrs (davev at ziplip.com) 
 " Install:       Put this file in the vim plugins directory to load it 
 "                automatically, or load it with :so ShowFunc.vim 
@@ -11,11 +11,12 @@
 "                file types. 
 " History:       This script grew from an idea posted by Flemming Madsen, on 
 "                http://vim.sourceforge.net/tips/tip.php?tip_id=79. 
-"                (http://ctags.sourceforge.net/). 
 " WARNING:       It may write the file as a side effect. 
 " Requires:      Vim 6.0 or newer. 
+"                This script requires exuberant ctags to work.   
+"                (http://ctags.sourceforge.net/). 
 " Supported File Types: 
-"  For Classes     - Java ,Python 
+"  For Classes     - Java 
 "  For Functions   - Awk, C, C++, Fortran, Lisp, Pascal, PHP, Python, Ruby, 
 "                    Shell Scripts, Scheme, Slang, and Vim 
 "  For Macros      - Makefiles 
@@ -30,8 +31,8 @@ endif
 let loaded_showfunc=1 
 			 
 " Enable filetype detection 
-filetype on 
-			  
+filetype on
+ 			  
 " ---------- 
 " Mappings 
 
@@ -50,8 +51,8 @@ function! ShowFunc(sort)
 	cclose 
 	redraw
   if ( &filetype == "awk" || &filetype == "c" || &filetype == "lisp" || 
-		 \ &filetype == "php" || &filetype == "ruby" || &filetype == "scheme" ||
-		 \ &filetype == "sh" ||  &filetype == "slang" )
+		 \ &filetype == "php" || &filetype == "python" || &filetype == "ruby" ||
+		 \ &filetype == "scheme" || &filetype == "sh" ||  &filetype == "slang" )
     let &grepformat = '%*\k%*\sfunction%*\s%l%*\s%f %m'
     let &grepprg = 'ctags -x --'.&filetype.'-types=f --sort='.a:sort
   elseif ( &filetype == "cpp"  )
@@ -61,7 +62,8 @@ function! ShowFunc(sort)
     let &grepformat = '%*\k%*\sproc%*\s%l%*\s%f %m'
     let &grepprg = 'ctags -x --language-force=tcl --sort='.a:sort
   elseif ( &filetype == "fortran"  )
-    let &grepformat = '%*\k%*\s\(function\|subroutine\)%*\s%l%*\s%f %m'
+    let &grepformat = '%*\k%*\sfunction%*\s%l%*\s%f %m,'.
+		                \ '%*\k%*\ssubroutine%*\s%l%*\s%f %m'
     let &grepprg = 'ctags -x --'.&filetype.'-types=fs --sort='.a:sort
   elseif ( &filetype == "java" ) 
     let &grepformat = '%*\k%*\sclass%*\s%l%*\s%f %m' 
@@ -70,14 +72,12 @@ function! ShowFunc(sort)
     let &grepformat= '%*\k%*\smacro%*\s%l%*\s%f %m'
     let &grepprg = 'ctags -x --make-types=m --sort='.a:sort
   elseif ( &filetype == "pascal"  )
-    let &grepformat = '%*\k%*\s\(function\|procedure\)%*\s%l%*\s%f %m'
+    let &grepformat = '%*\k%*\sfunction%*\s%l%*\s%f %m,'.
+		                \ '%*\k%*\sprocedure%*\s%l%*\s%f %m'
     let &grepprg = 'ctags -x --'.&filetype.'-types=fp --sort='.a:sort
 	elseif ( &filetype == "perl" || &filetype == "rexx" )
     let &grepformat = '%*\k%*\ssubroutine%*\s%l%*\s%f %m'
     let &grepprg = 'ctags -x --'.&filetype.'-types=s --sort='.a:sort
-  elseif ( &filetype == "python"  )
-    let &grepformat = '%*\k%*\s\(class\|function\)%*\s%l%*\s%f %m'
-    let &grepprg = 'ctags -x --'.&filetype.'-types=cf --sort='.a:sort
   elseif ( &filetype == "vim" )
     let &grepformat = '%*\k%*\sfunction%*\s%l%*\s%f %m'
     let &grepprg = 'ctags -x --vim-types=f --language-force=vim --sort='.a:sort
@@ -109,7 +109,11 @@ endfunc
 " ------------------------------------------------------------------------------ 
 " Version History
 " ------------------------------------------------------------------------------ 
-" 1.0  08-24-2002  Initial Release.  
-" 1.1  08-26-2002  Patches to Fortran (thanks to Ajit Thakkar), Pascal, 
-"                  and Python support.     
+" 1.0   08-24-2002  Initial Release.  
+" 1.1   08-26-2002  Patches to Fortran (thanks to Ajit Thakkar), Pascal, 
+"                   and Python support.     
+" 1.1.1 08-26-2002  Fixed copy&paste errors.  ooops.
+" 1.1.2 08-27-2002  Removed the Python patch.
+" 1.1.3 08-31-2002  Fixed Fortran and Pascal patches, Thanks the Ajit Thakkar,
+"                   and Engelbert Gruber.  
 " ------------------------------------------------------------------------------ 
