@@ -1,7 +1,7 @@
 " ------------------------------------------------------------------------------
 " Filename:      ~/.vim/plugin/ShowFunc.vim
 " VimScript:     #397
-" Last Modified: 13 Mar 2003 07:25:04 PM by Dave V.
+" Last Modified: 15 Mar 2003 08:38:24 PM by Dave V.
 " Maintainer:    Dave Vehrs (davev at ziplip.com)
 " Copyright:     (C) 2002-2003 Dave Vehrs
 "                Distributed under the terms of the GNU General Public License 
@@ -45,15 +45,14 @@ endif
 " To change the main key mapping, add this to your .vimrc file:
 "   map <key> <PLug>ShowFunc
 
-if !hasmapto('<PLUG>ShowFuncMain') && (maparg('<F1>') == '')
-	map  <F1> <Plug>ShowFuncMain
-  map! <F1> <Plug>ShowFuncMain
+if !hasmapto('<PLUG>ShowFunc') && (maparg('<F1>') == '')
+	map  <F1> <Plug>ShowFunc
+  map! <F1> <Plug>ShowFunc
 endif
-noremap  <silent> <Plug>ShowFuncMain   :call <SID>ShowFuncOpen()<CR>
-noremap! <silent> <Plug>ShowFuncMain   <ESC>:call <SID>ShowFuncOpen()<CR>
+noremap  <silent> <Plug>ShowFunc   :call <SID>ShowFuncOpen()<CR>
+noremap! <silent> <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
 
-" Close, refresh, scan-sort and -type key mappings can be found in the OpenCWin
-" function (this is to insure that they are associated with only the cwindow).
+" Cwindow specific key mappings can be found in the OpenCWinfunction.
 " ------------------------------------------------------------------------------
 function! <SID>ChangeScanType() 
 	if g:ShowFuncScanType == "buffers"     | let g:ShowFuncScanType = "windows"
@@ -83,17 +82,21 @@ endfunction
 function! s:OpenCWin()
   let l:mod_total = 0
   let l:win_count = 1
+  " Determine correct window height
 	windo let l:win_count =  l:win_count + 1
   if ( l:win_count <= 2 ) | let l:win_count = 4 | endif
   windo let l:mod_total = l:mod_total + winheight(0)/l:win_count | 
   \ execute 'resize +'.l:mod_total
+  " Open cwindow
   execute 'belowright copen '.l:mod_total   
 	let l:cwin_filelen = line("$")
+  " Test for short output lists.
   if ( l:cwin_filelen < winheight(0) )
     cclose
+    " And adjust cwindow height accordingly.
     execute 'belowright copen '.l:cwin_filelen
   endif
-  " Set close, refresh, scan-sort and -type mappings
+  " Set cwindow specific key mappings.  
   nnoremap <buffer> <silent> c :cclose<CR>
   nnoremap <buffer> <silent> h :call <SID>DisplayHelp()<CR>
   nnoremap <buffer> <silent> r :call <SID>ShowFuncOpen()<CR>
@@ -103,6 +106,36 @@ function! s:OpenCWin()
   return
 endfunction
 
+" Set Folds by filename
+function! s:SetFolds()
+  let l:test_line = getline(v:lnum)
+  let l:test_filename = strpart(l:test_line,0,stridx(l:test_line,'|'))
+  if ( g:FoldFileName == '' )
+    let g:FoldFileName = l:test_filename
+    return ">1"
+  elseif ( g:FoldFileName == l:test_filename )
+    return "="
+  else
+    let g:FoldFileName = l:test_filename
+    return ">1"
+  endif
+endfunction
+
+" Set FoldText to filename only.
+" Note: Do not use s: or <SID> on this function or the foldtext will be lost the 
+" first time a fold is opened.  
+function! SetFoldText()
+  let l:line = getline(v:foldstart)
+  let l:subline = strpart(l:line,0,stridx(l:line,'|'))
+  let l:tag_count = v:foldend - v:foldstart + 1
+  return v:folddashes."File: ".l:subline."  Tags: ".l:tag_count 
+endfunction
+
+" SetGrepFormat and SetGrepPrg both have language and tag support hard coded so
+" any changes to exuberant ctags will need to be reflected here.  And on top of
+" that its ugly.  I submitted a patch to exuberant ctags that has been accepted 
+" for inclusion in the next version that will allow us to query ctags directly
+" for supported languages and tags.  
 function! s:SetGrepFormat()
   let l:tags = ''
   let l:tag_return = ''
@@ -173,9 +206,8 @@ function! s:SetGrepFormat()
   elseif ( &filetype == "yacc" )
     let l:tags = 'label'
   else | return "fail" | endif
-  " pad end of l:tags with one space.  
   let l:tags = l:tags." "  
-  " create grep option list.
+  " Loop over tag lists and create the grepformat statement.  
   while l:tags != ''
     let l:tagcut = strpart(l:tags,0,stridx(l:tags,' '))
     if ( l:tag_count == 1  && l:tagcut != '' )
@@ -190,33 +222,15 @@ function! s:SetGrepFormat()
 endfunction
 
 function! s:SetGrepPrg(sort)
-  if ( &filetype == "asm"     ||
-     \ &filetype == "asp"     ||
-     \ &filetype == "awk"     ||
-     \ &filetype == "beta"    ||
-     \ &filetype == "c"       ||
-     \ &filetype == "cobol"   ||
-     \ &filetype == "eiffel"  ||
-     \ &filetype == "fortran" ||
-     \ &filetype == "java"    ||
-     \ &filetype == "lisp"    ||
-     \ &filetype == "lua"     ||
-     \ &filetype == "make"    ||
-     \ &filetype == "pascal"  ||
-     \ &filetype == "perl"    ||
-     \ &filetype == "php"     ||
-     \ &filetype == "python"  ||
-     \ &filetype == "rexx"    ||
-     \ &filetype == "ruby"    ||
-     \ &filetype == "scheme"  ||
-     \ &filetype == "sh"      ||
-     \ &filetype == "slang"   ||
-     \ &filetype == "sql"     ||
-     \ &filetype == "tcl"     ||
-     \ &filetype == "vera"    ||
-     \ &filetype == "verilog" ||
-     \ &filetype == "vim"     ||
-     \ &filetype == "yacc" )
+  if ( &filetype == "asm"     || &filetype == "asp"     || &filetype == "awk"   ||
+     \ &filetype == "beta"    || &filetype == "c"       || &filetype == "cobol" ||
+     \ &filetype == "eiffel"  || &filetype == "fortran" || &filetype == "java"  ||
+     \ &filetype == "lisp"    || &filetype == "lua"     || &filetype == "make"  ||
+     \ &filetype == "pascal"  || &filetype == "perl"    || &filetype == "php"   ||
+     \ &filetype == "python"  || &filetype == "rexx"    || &filetype == "ruby"  ||
+     \ &filetype == "scheme"  || &filetype == "sh"      || &filetype == "slang" ||
+     \ &filetype == "sql"     || &filetype == "tcl"     || &filetype == "vera"  ||
+     \ &filetype == "verilog" || &filetype == "vim"     || &filetype == "yacc"  )
     return 'ctags -x --language-force='.&filetype.' --sort='.a:sort
   elseif ( &filetype == "cpp"  )
     return 'ctags -x --language-force=c++ --sort='.a:sort
@@ -225,6 +239,7 @@ endfunction
 
 function! <SID>ShowFuncOpen()
 	set lazyredraw
+  " Close any existing cwindows.
 	cclose
   if ( &lines >= 8 )
 		let l:count = 0
@@ -260,23 +275,22 @@ function! <SID>ShowFuncOpen()
 	  let &grepformat = l:gf_s
     let &grepprg = l:gp_s
 		execute s:OpenCWin()
+		if ( g:ShowFuncScanType == "buffers" || g:ShowFuncScanType ==  "windows" )
+      let g:FoldFileName = ''
+      setlocal foldexpr=s:SetFolds()
+      setlocal foldmethod=expr
+      setlocal foldtext=SetFoldText()
+    endif
 	else  | echomsg "ShowFunc Error: Window too small." | endif
 	set nolazyredraw
 	redraw!
 endfunction
 " ------------------------------------------------------------------------------
 " Feature Wishlist:
-" 1.  Improved Multiple file handling.  I would like to open the files as folds
-"     in the cwindow.
-" 2.  Multiple tag support.  It would be nice to support all the filetypes that
-"     ctags does and to support all the tag types too.  Currently experimenting
-"     with vim functions and variables. 
-" 3.  If scan is set to "current", make cwindow update on buffer change (except
+" 1.  If scan is set to "current", make cwindow update on buffer change (except
 "     to the cwindow)
-" 4.  When ShowFunc opens, the other windows size ratios remain roughly the
-"     same, however when you close the cwindow, the other windows all become
-"     equal in height (just as if ctrl-W = had been pushed).  They should return
-"     to same ratios.
+" 2.  Window size ratios should remain the same as ShowFunc opens and closes.
+" 3.  Patch vim to allow for setlocal statusline.
 " ------------------------------------------------------------------------------
 " Version History:
 " 1.0      08-24-2002  Initial Release.
@@ -286,9 +300,8 @@ endfunction
 " 1.1.2    08-27-2002  Removed the Python patch.
 " 1.1.3    08-31-2002  Fixed Fortran and Pascal patches, Thanks to Ajit Thakkar,
 "                      and Engelbert Gruber.
-" 1.2      09-22-2002  Fixed redraw bug so that it works with the Winmanager
-"                      ndow scan display issue. Improved dynamic 
-  "                      cwindow sizing.  Added basic help dialog(vimscript#95) and Bufexplorer (vimscript#42) scripts.
+" 1.2      09-22-2002  Fixed redraw bug so that it works with the Winmanager 
+"                      (vimscript#95) and Bufexplorer (vimscript#42) scripts.
 " 1.2.1    10-17-2002  Added unknown filetype handling. Added status messages
 "                      ('ShowFunc:').  Fixed key-mappings.
 " 1.3Beta  11-16-2002  Beta: Multiple file handling.  Restructured script.
@@ -310,7 +323,10 @@ endfunction
 "                      (ShowFuncOpen) and bought back the all open windows scan.
 " 1.4.1    01-19-2003  Fixed multi-window scan display issue. Improved dynamic 
 "                      cwindow sizing.  Added basic help dialog. 
-" 1.4.xxxx xx-xx-xxxx  Rewrote the SetGrepFormat and SetGrepPrg functions. Added
-"                      ability to find Vim autocommand groups (augroup).  
+" 1.4.2    03-13-2003  Rewrote the SetGrepFormat and SetGrepPrg functions. Added
+"                      support for all tags for all languages that Exburent
+"                      Ctags (ver. 5.4) supports. 
+" 1.4.3    03-15-2003  Automatically fold output on filename for multiple file 
+"                      scans (all buffers or windows).   
 " ------------------------------------------------------------------------------
 " vim: tw=80 ts=2 sw=2
