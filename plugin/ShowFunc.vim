@@ -1,8 +1,10 @@
 " ------------------------------------------------------------------------------
 " Filename:      ~/.vim/plugin/ShowFun
 " VimScript:     #397
-" Last Modified: 01 Dec 2002 10:04:43 AM by Dave V.
+" Last Modified: 21 Dec 2002 05:41:49 PM by Dave V.
 " Maintainer:    Dave Vehrs (davev at ziplip.com)
+" Copyright:     (C) 2001,2002 Dave Vehrs
+"                Distributed under the terms of the GNU General Public License 
 " Install:       Put this file in the vim plugins directory (~/.vim/plugin)
 "                to load it automatically, or load it manually with
 "                :so ShowFunc.vim.
@@ -35,79 +37,68 @@ let loaded_showfunc=1
 filetype on
 
 " ------------------------------------------------------------------------------
+" Defaults
+
+" ScanType
+" Options:
+"  buffers  |  Scan all open buffers.
+"  current  |  Scan only the current buffer.
+"  windows  |  Scan all open windows.
+if !exists("g:ShowFuncScanType")
+  let g:ShowFuncScanType = "buffers"
+endif
+
+" SortType
+" Options:
+"  yes  |  Display output sorted alphabetically.
+"  no   |  Display output in file order. 
+if !exists("g:ShowFuncSortType")
+  let g:ShowFuncSortType = "no"
+endif
+
+" ------------------------------------------------------------------------------
 " Key Mappings
 
-" Defaults:
-" F1 = SBufDontSort = Scan current buffer/display results in file order.
-" F2 = SBufSort     = Scan current buffer/display results in alphabetical order.
-" F3 = MBufDontSort = Scan all open buffers/display results in file order.
-" F4 = MBufSort     = Scan all open buffers/display results in alphabetical order.
-"
-" To change the F1 mappings, add this to your .vimrc file
-"   map  NewKey   <Plug>SBufDontSort
-"   map! NewKey   <Plug>SBufDontSort
+" To change the key mapping, add this to your .vimrc file:
+"   map <key> <PLug>ShowFunc
+" For example to map <F7>:
+"   map <F7> <Plug>ShowFunc
 
-" Single Buffer Mappings
-" List in file order.
-if !hasmapto('<PLUG>SBufDontSort') && (maparg('<F1>') == '')
-	map  <F1> <Plug>SBufDontSort
-	map! <F1> <Plug>SBufDontSort
+if !hasmapto('<PLUG>ShowFunc') && (maparg('<F1>') == '')
+		map  <F1> <Plug>ShowFunc
+	  map! <F1> <Plug>ShowFunc
 endif
-noremap  <Plug>SBufDontSort   :call <sid>SingleBuf("no")<CR>
-noremap! <Plug>SBufDontSort   <ESC>:call <sid>SingleBuf("no")<CR>
-" List in alphabetical order.
-if !hasmapto('<PLUG>SBufSort') && (maparg('<F2>') == '')
-	map  <F2> <Plug>SBufSort
-	map! <F2> <Plug>SBufSort
-endif
-noremap  <Plug>SBufSort   :call <sid>SingleBuf("yes")<CR>
-noremap! <Plug>SBufSort   <ESC>:call <sid>SingleBuf("yes")<CR>
+noremap  <Plug>ShowFunc   :call <SID>ShowFuncOpen()<CR>
+noremap! <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
 
-" Multiple Buffer Mappings
-" List in file order.
-if !hasmapto('<PLUG>MBufDontSort') && (maparg('<F3>') == '')
-	map  <F3> <Plug>MBufDontSort
-	map! <F3> <Plug>MBufDontSort
-endif
-noremap  <Plug>MBufDontSort   :call <sid>MultiBuf("no")<CR>
-noremap! <Plug>MBufDontSort   <ESC>:call <sid>MultiBuf("no")<CR>
-" List in alphabetical order.
-if !hasmapto('<PLUG>MBufSort') && (maparg('<F4>') == '')
-	map  <F4> <Plug>MBufSort
-	map! <F4> <Plug>MBufSort
-endif
-noremap  <Plug>MBufSort   :call <sid>MultiBuf("yes")<CR>
-noremap! <Plug>MBufSort   <ESC>:call <sid>MultiBuf("yes")<CR>
+" Key mappings for scan sort and type can be found in the OpenCWin function,
+" this is so that they are just associated with the cwindow only.  
 
 " ------------------------------------------------------------------------------
 " Functions
 
-" Function: MultiBuf
-" Run against all open buffers at the same time.
-function! s:MultiBuf(sort)
-	set lazyredraw
-	cclose
-	let currbuf = bufnr("%")
-  if ( &lines >= 8 )
-    let gf_s = &grepformat
-    let gp_s = &grepprg
-    set grepformat&vim
-    set grepprg&vim
-		let s:count = 0
-	  bufdo! let &grepformat = s:SetGrepFormat() | let &grepprg =
-		  \ s:SetGrepPrg(a:sort) | if ( &grepformat != "fail" && &grepprg !=
-			\ "fail" )| if ( &readonly == 0 ) | update | endif | if ( s:count == 0 ) |
-			\ silent! grep % | let s:count =  s:count + 1 | else | silent! grepa % |
-			\ endif | endif
-	  let &grepformat = gf_s
-    let &grepprg = gp_s
-		execute 'buffer '.currbuf
-		execute s:OpenCWin()
-	else
-		echomsg "ShowFunc Error: Window too small, canceling"
+" Function ChangeScanType
+function! <sid>ChangeScanType()
+	if g:ShowFuncScanType == "buffers"
+  	let g:ShowFuncScanType = "windows"
+	elseif g:ShowFuncScanType == "windows"
+  	let g:ShowFuncScanType = "current"
+	elseif g:ShowFuncScanType == "current"
+  	let g:ShowFuncScanType = "buffers"
+  endif
+	call <SID>ShowFuncOpen()
+endfunction
+
+" Function ChangeSortType
+" Note:  Scanning the only the current window was removed from this function 
+"        because it only works if it was called as the default for ShowFuncOpen.
+function! <SID>ChangeSortType()
+	if g:ShowFuncSortType == "no"
+  	let g:ShowFuncSortType = "yes"
+	elseif g:ShowFuncSortType == "yes"
+  	let g:ShowFuncSortType = "no"
 	endif
-	set nolazyredraw
-	redraw!
+	call <SID>ShowFuncOpen()
 endfunction
 
 " Function: OpenCWin
@@ -128,6 +119,9 @@ function! s:OpenCWin()
 	    cclose
 	    exe 'belowright copen '.cwin_filelen
 	  endif
+		" Set Scan sort and type mappings
+    nnoremap <buffer> <silent> t :call <SID>ChangeScanType()<CR>
+    nnoremap <buffer> <silent> s :call <SID>ChangeSortType()<CR>
 		return
 endfunction
 
@@ -190,27 +184,49 @@ function! s:SetGrepPrg(sort)
 	endif
 endfunction
 
-" Function: SingleBuf
-" Run on the current buffer only.
-function! s:SingleBuf(sort)
+"Function ShowFuncOpen
+function! <SID>ShowFuncOpen()
 	set lazyredraw
+	let currbuf = bufnr("%")
+	let currwin = winnr()
 	cclose
   if ( &lines >= 8 )
-		let gf_s = &grepformat
-		let gp_s = &grepprg
+    let gf_s = &grepformat
+    let gp_s = &grepprg
     set grepformat&vim
     set grepprg&vim
-	  let &grepformat = s:SetGrepFormat()
-    let &grepprg = s:SetGrepPrg(a:sort)
-		if ( &grepformat != "fail" && &grepprg != "fail" )
-      if ( &readonly == 0 ) | update | endif
-      silent! grep %
-		  execute s:OpenCWin()
-		else
-			echomsg "ShowFunc Error: Unknown FileType"
+		if ( g:ShowFuncScanType == "buffers" )
+      " Scan all open buffers.
+		  let s:count = 0
+	    bufdo! let &grepformat = s:SetGrepFormat() | let &grepprg =
+		    \ s:SetGrepPrg(g:ShowFuncSortType) | if ( &grepformat != "fail" && 
+				\ &grepprg != "fail" )| if ( &readonly == 0 ) | update | endif | 
+				\ if ( s:count == 0 ) | silent! grep % | let s:count =  s:count + 1 |
+				\ else | silent! grepa % | endif | endif
+		elseif ( g:ShowFuncScanType == "windows" )
+		  " Scan all open windows.
+		  let s:count = 0
+	    windo! let &grepformat = s:SetGrepFormat() | let &grepprg =
+		    \ s:SetGrepPrg(g:ShowFuncSortType) | if ( &grepformat != "fail" && 
+				\ &grepprg != "fail" )| if ( &readonly == 0 ) | update | endif |
+				\ if ( s:count == 0 ) | silent! grep % | let s:count =  s:count + 1 |
+				\ else | silent! grepa % | endif | endif	
+		elseif ( g:ShowFuncScanType == "current" )
+		  " Scan current buffer only. 
+  	  let &grepformat = s:SetGrepFormat()
+      let &grepprg = s:SetGrepPrg(g:ShowFuncSortType)
+		  if ( &grepformat != "fail" && &grepprg != "fail" )
+        if ( &readonly == 0 ) | update | endif
+        silent! grep %
+		  else
+			  echomsg "ShowFunc Error: Unknown FileType")
+		  endif
 		endif
 	  let &grepformat = gf_s
     let &grepprg = gp_s
+		  execute currwin.' wincmd w'
+		  execute 'buffer '.currbuf
+		execute s:OpenCWin()
 	else
 		echomsg "ShowFunc Error: Window too small."
 	endif
@@ -224,9 +240,7 @@ endfunction
 "     in the cwindow.
 " 2.  Multiple tag support.  It would be nice to support all the filetypes that
 "     ctags does and to support all the tag types too.  Currently experimenting
-"     with vim functions and variables.
-" 3.  Key mappings are out of control.  4 for one simple script is too many,
-"     need to determine a better way of doing it.
+"     with vim functions and variables.  
 " ------------------------------------------------------------------------------
 " Version History
 " 1.0      08-24-2002  Initial Release.
@@ -252,4 +266,9 @@ endfunction
 "                      window height test for TestWinH and OpenCWin.  Changed
 "                      MultiWin (scans all open windows) to MultiBuf (scans all
 "                      open buffers). Basic multiple file handling is complete.
+" 1.4      12-21-2002  Changed user interface. Eliminated multiple key-mappings.
+"                      Pressing F1 runs the default scan, and opens the cwindow.
+"                      Scan sort and type can be changed by pressing the s and t
+"                      keys respectively.  Unifed scan types into one function 
+"                      (ShowFuncOpen) and bought back the all open windows scan.  
 " ------------------------------------------------------------------------------
