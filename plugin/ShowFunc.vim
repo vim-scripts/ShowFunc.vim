@@ -1,7 +1,7 @@
 " ------------------------------------------------------------------------------
 " Filename:      ~/.vim/plugin/ShowFunc.vim
 " VimScript:     #397
-" Last Modified: 21 Sep 2003 08:15:50 PM by Dave Vehrs
+" Last Modified: 06 Oct 2003 10:33:21 PM by Dave Vehrs
 " Maintainer:    Dave Vehrs (davev at ziplip.com)
 " Copyright:     (C) 2002-2003 Dave Vehrs
 "                This script is free software; you can redistribute it and/or 
@@ -12,7 +12,7 @@
 "                subroutines, classes, macros or procedures in a  single file or
 "                all currently open windows and displays them in a dynamically
 "                sized cwindow.
-" History:       This script grew from an idea posted by Flemming Madsen, on
+" History:       This script inspired by an idea posted by Flemming Madsen, in
 "                vimtip#79.
 " WARNING:       It may write the file as a side effect.
 " Requires:      Vim 6.0 or newer.
@@ -30,7 +30,6 @@ let g:loaded_showfunc=1
 filetype on
 " ------------------------------------------------------------------------------
 " Configuration:                                                             {{{
-
 " Test for and if necessary configure all default settings.  If you would like
 " to change any setting, just add let g:variablename = "new-value" to your
 " .vimrc.
@@ -52,13 +51,12 @@ if ( !exists("g:ShowFuncSortType") )
   let g:ShowFuncSortType = "foldcase"
 endif
 
-" If necessary, uncomment and set the g:showfuncctagsbin variable.
-" let g:showfuncctagsbin = "ctags"
-
+" You can limited the filetypes that are supported by listing them seperated 
+" by "^@".  
+" let g:CtagsSupportedFileTypes = "c^@python^@perl^@"
 "                                                                            }}}
 " ------------------------------------------------------------------------------
-" Functions:                                                                  {{{
-
+" Functions:                                                                 {{{
 " Rotate through available scan types.
 function! <SID>ChangeScanType()
 	if g:ShowFuncScanType == "buffers"     | let g:ShowFuncScanType = "windows"
@@ -82,10 +80,9 @@ function! s:CtagsTest(path)
   " if the location of the ctags executable is not already configured, then 
   " attempt to find it....
   if ( a:path == "unk" )
-    let l:test_paths = "/usr/local/bin/ctags ".
-      \ "/usr/bin/ctags C:\\gnu\ctags\\ctags.exe "
+    let l:test_paths = "/usr/local/bin/ctags /usr/bin/ctags" .
+      \ " C:\\gnu\\ctags\\ctags.exe"
     let l:rpath = "fail"  
-    " Loop over tag lists and create the grepformat statement.
     while l:test_paths != ''
       let l:pathcut = strpart(l:test_paths,0,stridx(l:test_paths,' '))
       if ( executable(l:pathcut) )
@@ -98,9 +95,8 @@ function! s:CtagsTest(path)
     endwhile
     if ( l:rpath == "fail" )
       if ( !has("gui_running") || has("win32") )
-        echo confirm ( "ShowFunc Error: Ctags binary not found.\n".
-          \            "Please set g:showfuncctagsbin in your .vimrc.\n" ,
-          \            "&ok", 0, "Warning" )
+        echo "ShowFunc Error: Ctags binary not found.\n".
+          \  "Please set g:showfuncctagsbin in your .vimrc.\n" 
       endif
     endif
   else
@@ -109,9 +105,8 @@ function! s:CtagsTest(path)
       let l:rpath = s:CtagsVersionTest(a:path)
     else
       if ( !has("gui_running") || has("win32") )
-        echo confirm ( "ShowFunc Error: Ctags binary not found.\n".
-          \            "Your g:showfuncctagsbin may be set incorrectly.\n",
-          \            "&ok", 0, "Warning" )
+        echo "ShowFunc Error: Ctags binary not found.\n".
+          \  "Your g:showfuncctagsbin may be set incorrectly.\n"
       endif
       let g:loaded_showfunc = 0
       let l:rpath = "fail"
@@ -120,34 +115,65 @@ function! s:CtagsTest(path)
   return l:rpath
 endfunction 
 
-" Test to be sure we have Exuberant Ctags
-function! s:CtagsVersionTest(path)
-  " Test Ctags for correct version. 
-  let ctagsvertest = strpart(strtrans(system(a:path." -x  --version")),
-    \ 0,15)
+" Test to be sure we have Exuberant Ctags.
+function! s:CtagsVersionTest(path) 
+  " Test Ctags for correct ctags project.. 
+  let l:test_str = strtrans(system(a:path . " -x  --version"))
+  let ctagsvertest = strpart(l:test_str,0,15)
   if ( ctagsvertest != "Exuberant Ctags" )
     if ( !has("gui_running") || has("win32") )
-      echo confirm ( "ShowFunc Error: Incorrect Version of Ctags.\n".
-        \            "Download the correct version from ".
-        \            "http://ctags.sourceforge.net\n", 
-        \            "&ok", 0, "Warning" )
+      echo "ShowFunc Error: Incorrect Version of Ctags.\n".
+        \  "Download the correct version from http://ctags.sourceforge.net"
     endif
     let g:loaded_showfunc = 0
     let l:rpath = "fail"
   else
     let l:rpath = a:path
+    " Set Ctags version variables.
+    let g:CtagsMajorVersion = strpart(l:test_str,(stridx(l:test_str,"s ")+2),
+      \ (stridx(l:test_str,".")-(stridx(l:test_str,"s ")+2))  )
+    let l:test_str2 = strpart(l:test_str,(stridx(l:test_str,".")+1))
+    if ((stridx(l:test_str2,".") < stridx(l:test_str2,",")) && (stridx(l:test_str2,".") >= 0))
+      let g:CtagsSubVersion = strpart(l:test_str2,
+        \ (stridx(l:test_str2,".")+1),(stridx(l:test_str2,",")-(stridx(l:test_str2,".")+1)))
+
+      let g:CtagsMinorVersion = strpart(l:test_str2,0,
+        \ (stridx(l:test_str2,".")))
+    else
+      let g:CtagsMinorVersion = strpart(l:test_str2,0,
+        \ (stridx(l:test_str2,",")))
+      let g:CtagsSubVersion = "0"
+    endif
+"    echo "Major : |" . g:CtagsMajorVersion . "|"
+"    echo "Minor : |" . g:CtagsMinorVersion . "|"
+"    echo "Sub   : |" . g:CtagsSubVersion   . "|"
+    " Test for correct versions.
+    if (g:CtagsMajorVersion < 5)
+      echo "Exuberant Ctags needs to be upgraded for ShowFunc to work."
+      echo "Please visit http://ctags.sourceforge,net."
+      let l:rpath = "fail"
+    elseif (g:CtagsMinorVersion <= 4)
+      echo "Exuberant Ctags should be upgraded, some features of the"
+      echo "ShowFunc script may not work."
+      echo "Please visit http://ctags.sourceforge,net."
+    endif
+    " Define default supported file types list for Ctags versions 5.5 and newer.
+    if (!exists("g:CtagsSupportedFileTypes") && g:CtagsMajorVersion == 5 && 
+      \ g:CtagsMinorVersion >= 5)
+      let g:CtagsSupportedFileTypes = strtrans(system(l:rpath . 
+        \ " -x --list-languages"))
+    endif
   endif
   return l:rpath
 endfunction
 
  " Display a simple help window.
 function! <SID>DisplayHelp() 
-  echo confirm ("ShowFunc Help:          \n".
-  \             " c  Close                   \n".
-  \             " r  Refresh                 \n".
-  \             " s  Change Scan Sort  \n".
-  \             " t  Change Scan Type \n",
-  \             "&ok", 0, "Info")
+  echo "ShowFunc Help:          \n".
+    \  " c  Close                   \n".
+    \  " r  Refresh                 \n".
+    \  " s  Change Scan Sort  \n".
+    \  " t  Change Scan Type \n"
 endfunction
 
 " Determine the best window height for the new cwindow and open it.
@@ -179,7 +205,7 @@ function! s:OpenCWin()
 endfunction
 
 " Set Folds by filename.
-function! s:SetFolds()
+function! s:ShowFuncFolds()
   let l:test_line = getline(v:lnum)
   let l:test_filename = strpart(l:test_line,0,stridx(l:test_line,'|'))
   if ( g:FoldFileName == '' )
@@ -194,7 +220,7 @@ function! s:SetFolds()
 endfunction
 
 " Set FoldText to filename and tag count.
-function! SetFoldText()
+function! ShowFuncText()
   let l:line = ""
   let l:textwidth = &textwidth - 20
   let l:line = getline(v:foldstart)
@@ -215,11 +241,11 @@ function! SetFoldText()
   else
     return v:folddashes."+ File: ".l:line." Tags: ". l:tag_count." "
   endif
-endfunction
+endfunction  
 
 " Set ctags options to call.
 function! s:SetGrepPrg(sort)
-  if ( g:CtagsVersion < 5 )
+  if ( g:CtagsMinorVersion < 5 )
     if ( &filetype == "asm"     || &filetype == "asp"     || &filetype == "awk"   ||
       \ &filetype == "beta"    || &filetype == "c"       || &filetype == "cobol" ||
       \ &filetype == "eiffel"  || &filetype == "fortran" || &filetype == "java"  ||
@@ -259,7 +285,7 @@ function! <SID>ShowFuncOpen()
     let l:gp_s = &grepprg
     set grepformat&vim
     set grepprg&vim
-    let &grepformat = '%*\k%*\s%*[^0-9]%*\s%l%*\s%f %m' 
+    let &grepformat = '%*\k%*\s%*\k%*\s%l%*\s%f %m' 
 		if ( g:ShowFuncScanType == "buffers" )
       " Scan all open buffers.
 	    let l:currbuf = bufnr("%")
@@ -281,7 +307,9 @@ function! <SID>ShowFuncOpen()
         if ( &readonly == 0 ) | update | endif
         silent! grep! %
 		  else
-        echo confirm ("ShowFunc Error: Unknown FileType", "&ok", 0, "Info")
+        echohl WarningMsg
+        echo "ShowFunc Error: Unknown FileType"
+        echohl none
       endif
 		endif
 	  let &grepformat = l:gf_s
@@ -290,53 +318,46 @@ function! <SID>ShowFuncOpen()
 		if ( g:ShowFuncScanType == "buffers" || g:ShowFuncScanType ==  "windows" )
       " Do folding.
       let g:FoldFileName = ''
-      setlocal foldexpr=s:SetFolds()
+      setlocal foldexpr=s:ShowFuncFolds()
       setlocal foldmethod=expr
-      setlocal foldtext=SetFoldText()
+      setlocal foldtext=ShowFuncFoldText()
     endif
 	else
-    echo confirm ("ShowFunc Error: Window too small.\n", "&ok", 0, "Info")
+    echohl WarningMsg
+    echo "ShowFunc Error: Window too small.\n"
+    echohl none
   endif
 	set nolazyredraw
 	redraw!
-endfunction  
+endfunction   
 
 " Test for supported filetype.
 function! s:TestFileType(type) 
-  let l:supportedfiles = g:CTags_Supported_FileTypes
+  let l:supportedfiles = g:CtagsSupportedFileTypes
   while ( l:supportedfiles != "^@" && l:supportedfiles != "" ) 
     let l:sfcut = strpart(l:supportedfiles,0,stridx(l:supportedfiles,"^@"))
     if ( l:sfcut ==? a:type ) 
       return "true"
     endif
-    let l:supportedfiles = strpart(l:supportedfiles,stridx(l:supportedfiles,'^@') + 2)
+    let l:supportedfiles = strpart(l:supportedfiles,
+      \ stridx(l:supportedfiles,'^@')+2)
   endwhile
   return "false"
 endfunction
-
 "                                                                            }}}
 " ------------------------------------------------------------------------------
 " Test Environment:                                                          {{{
-
 " Test Ctags Binary to be sure its the correct version.
-if ( exists("g:showfuncctagsbin") )
+if (exists("g:showfuncctagsbin"))
   let g:showfuncctagsbin = s:CtagsTest(g:showfuncctagsbin)
-else
+endif
+if (!exists("g:showfuncctagsbin") || g:showfuncctagsbin == "fail")
   let g:showfuncctagsbin = s:CtagsTest("unk")
 endif
 
-" Determine Ctags version.
-let teststring = strtrans(system(g:showfuncctagsbin . " -x --version"))
-let g:CtagsVersion = strpart(teststring,(stridx(teststring,".")+1),
-  \ ((stridx(teststring,",")-(stridx(teststring,"." )+1))))
-
-" Define default supportted file types list.
-if ( !exists("g:CTags_Supported_FileTypes") && g:CtagsVersion == 5 )
-  let g:CTags_Supported_FileTypes = strtrans(system(g:showfuncctagsbin." -x --list-languages"))
-endif
-
+" If a suitable ctags binary cannot be found, clear functions and exit script.
 if ( g:showfuncctagsbin == "fail" )
-  " echo confirm ("Failed: ".g:showfuncctagsbin,"&ok",0,"Warning")
+  echo "ShowFunc exting.  (Cleaning up functions)"
   let g:loaded_showfunc = 0
   delfunction <SID>ChangeScanType
   delfunction <SID>ChangeSortType
@@ -345,13 +366,12 @@ if ( g:showfuncctagsbin == "fail" )
   delfunction <SID>DisplayHelp
   delfunction s:OpenCWin
   delfunction s:SetFolds
-  delfunction SetFoldText
-  delfunction s:SetGrepFormat
+  delfunction SetSFFoldText
   delfunction s:SetGrepPrg
   delfunction <SID>ShowFuncOpen
+  delfunction s:TestFileType
   finish
 endif 
-
 "                                                                            }}}
 " ------------------------------------------------------------------------------
 " Key Mappings:                                                              {{{
@@ -363,11 +383,10 @@ if ( !hasmapto('<PLUG>ShowFunc') && (maparg('<F1>') == '') )
   map! <F1> <Plug>ShowFunc
 elseif ( !hasmapto('<PLUG>ShowFunc') )
   if ( !has("gui_running") || has("win32") )
-    echo confirm ("ShowFunc Error: No Key mapped.\n".
-      \           "<F1> is taken and a replacement was not assigned.\n",
-      \           "&ok", 0, "Warning")
+    echo "ShowFunc Error: No Key mapped.\n".
+      \  "<F1> is taken and a replacement was not assigned."
   endif
-  let g:loaded_showfunc=0
+  let g:loaded_showfunc = 0
   finish
 endif
 noremap  <silent> <Plug>ShowFunc   :call <SID>ShowFuncOpen()<CR>
@@ -388,6 +407,7 @@ noremap! <silent> <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
 "     to the cwindow)
 " 2.  Window size ratios should remain the same as ShowFunc opens and closes.
 " 3.  Patch vim to allow for setlocal statusline.
+" 4.  Expand error format format so that the tag type is grabbed by grep.
 "                                                                            }}}
 " ------------------------------------------------------------------------------
 " Version History:                                                           {{{
@@ -439,6 +459,8 @@ noremap! <silent> <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
 "                      With Ctags versions 5.5 (and later) supported filetypes 
 "                      are detected dynamically (including those defined by 
 "                      regular expressions (--regex-<LANG>).  
+" 1.5.1   09-25-2003   Bug Fixes.
+" 1.5.2   10-06-2003   Improved Exuberant Ctags version checking.  
 "                                                                            }}}
 " ------------------------------------------------------------------------------
 " vim:tw=80:ts=2:sw=2:
