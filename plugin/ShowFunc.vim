@@ -1,9 +1,9 @@
 " ------------------------------------------------------------------------------
-" Filename:      ShowFunc.vim
+" Filename:      ShowFunc.vim                                                {{{
 " VimScript:     #397
 "
 " Maintainer:    Dave Vehrs <davev (at) ezrs.com>
-" Last Modified: 13 Jan 2005 12:56:40 PM by Dave Vehrs
+" Last Modified: 20 Jul 2005 13:07:11 by Dave Vehrs
 "
 " Copyright:     © 2002-2005 Dave Vehrs
 "
@@ -27,34 +27,27 @@
 "                subroutines, classes, macros or procedures in a  single file or
 "                all currently open windows and displays them in a dynamically
 "                sized cwindow.
-"
 " History:       This script inspired by an idea posted by Flemming Madsen, in
 "                vimtip#79.
 "
 " WARNING:       It may write the file as a side effect.
-"
 " Requires:      Vim 6.0 or newer.
 "                Exuberant ctags (http://ctags.sourceforge.net/).
-"
 " Install:       Put this file in the vim plugins directory (~/.vim/plugin)
 "                to load it automatically, or load it manually with
 "                :so ShowFunc.vim.
-"                                             Additional notes at end of file...
-" ------------------------------------------------------------------------------
-" Exit if already loaded.                                                    {{{
-if ( exists("loaded_showfunc") || &cp ) | finish | endif 
-let g:loaded_showfunc=1 
-			 
-" Enable filetype detection 
-filetype on
-"                                                                            }}}
+"                
+"                                          Additional notes at end of file...}}}
 " ------------------------------------------------------------------------------
 " Configuration:                                                             {{{
+
 " Test for and if necessary configure all default settings.  If you would like
 " to change any setting, just add let g:variablename = "new-value" to your
 " .vimrc.
 " For Example, to change the location of the ctags binary, add this:
-"     let g:showfuncctagsbin = "/bin"
+"     let g:showfuncctagsbin = "/bin/ctags"
+"       OR
+"     let g:showfuncctagsbin = "c:\\gnu\\ctags\\ctags.exe"
  
 " Default ScanType Options:   buffers  |  Scan all open buffers.
 "                             current  |  Scan only the current buffer.
@@ -74,15 +67,30 @@ endif
 " You can limited the filetypes that are supported by listing them seperated 
 " by "^@".  
 " let g:CtagsSupportedFileTypes = "c^@python^@perl^@"
+
+"                                                                            }}}
+" ------------------------------------------------------------------------------
+" Exit if already loaded.                                                    {{{
+
+if ( exists("loaded_showfunc") || &cp ) | finish | endif 
+let g:loaded_showfunc=1 
+			 
+" Enable filetype detection 
+filetype on
+
 "                                                                            }}}
 " ------------------------------------------------------------------------------
 " AutoCommands:                                                              {{{
 
-autocmd BufEnter * call <SID>LastWindow()
+augroup showfunc_autocmd
+  autocmd!
+  autocmd BufEnter * call <SID>LastWindow()
+augroup end
 
 "                                                                            }}}
 " ------------------------------------------------------------------------------
 " Functions:                                                                 {{{
+
 " Rotate through available scan types.
 function! <SID>ChangeScanType()
 	if g:ShowFuncScanType == "buffers"     | let g:ShowFuncScanType = "windows"
@@ -107,7 +115,7 @@ function! s:CtagsTest(path)
   " attempt to find it....
   if a:path == "unk"
     let l:test_paths = "/usr/local/bin/ctags /usr/bin/ctags" .
-      \ " C:\\gnu\\ctags\\ctags.exe"
+      \ " C:\\gnu\\ctags\\ctags.exe "
     let l:rpath = "fail"  
     while l:test_paths != ''
       let l:pathcut = strpart(l:test_paths,0,stridx(l:test_paths,' '))
@@ -392,7 +400,7 @@ endif
 if g:showfuncctagsbin == "fail" 
   echo "ShowFunc exting.  (Cleaning up functions)"
   let g:loaded_showfunc = 0
-  autocmd! BufEnter * call <SID>MyLastWindow()
+  augroup! showfunc_autocmd
   delfunction <SID>ChangeScanType
   delfunction <SID>ChangeSortType
   delfunction s:CtagsTest
@@ -400,8 +408,8 @@ if g:showfuncctagsbin == "fail"
   delfunction <SID>DisplayHelp
   delfunction <SID>LastWindow
   delfunction s:OpenCWin
-  delfunction s:SetFolds
-  delfunction SetSFFoldText
+  delfunction s:ShowFuncFolds
+  delfunction s:ShowFuncFoldText
   delfunction s:SetGrepPrg
   delfunction <SID>ShowFuncOpen
   delfunction s:TestFileType
@@ -428,7 +436,7 @@ endif
 noremap  <silent> <Plug>ShowFunc   :call <SID>ShowFuncOpen()<CR>
 noremap! <silent> <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
 
-" Cwindow specific key mappings can be found in the OpenCWinfunction.        }}}
+" Note: Cwindow specific key mappings can be found in the OpenCWin function. }}}
 " ------------------------------------------------------------------------------
 " Known Issues:                                                              {{{
 " 1.  Error messages that occur as gvim is loading (on Linux) do not display in 
@@ -447,7 +455,8 @@ noremap! <silent> <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
 "                                                                            }}}
 " ------------------------------------------------------------------------------
 " Notes:                                                                     {{{
-" 1. Best veiwed with AutoFold (vimscript#925).
+" 1. Best veiwed with AutoFold.vim (vimscript#925) and ShowFunc.vim
+"    (vimscript#397).
 "                                                                            }}}
 " ------------------------------------------------------------------------------
 " Version History:                                                           {{{
@@ -505,6 +514,9 @@ noremap! <silent> <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
 " 1.5.4   01-13-2005   Script cleanup.  Added MyLastWindow function (when
 "                      closing windows, tests last window to see if its a
 "                      Cwindow, if it is then close vim session). 
+" 1.5.5   07-20--2005  Patches from two Windows users (David Rennalls and Bill 
+"                      McCarthy).  Fixes in cleanup, documentaion, and autocmds.
+"
 "                                                                            }}}
 " ------------------------------------------------------------------------------
 " vim:tw=80:ts=2:sw=2:
