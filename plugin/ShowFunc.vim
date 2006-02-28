@@ -3,7 +3,7 @@
 " VimScript:     #397
 "
 " Maintainer:    Dave Vehrs <davev (at) ezrs.com>
-" Last Modified: 20 Jul 2005 13:07:11 by Dave Vehrs
+" Last Modified: 28 Feb 2006 11:50:54 AM by Dave V
 "
 " Copyright:     © 2002-2005 Dave Vehrs
 "
@@ -234,6 +234,9 @@ function! s:OpenCWin()
     " And adjust cwindow height accordingly.
     execute 'belowright copen '.l:cwin_filelen
   endif
+  if v:version >= 700
+    setlocal statusline=ShowFunc.vim\ Tag\ List
+  endif
   " Set cwindow specific key mappings.
   nnoremap <buffer> <silent> c :cclose<CR>
   nnoremap <buffer> <silent> h :call <SID>DisplayHelp()<CR>
@@ -325,7 +328,7 @@ function! <SID>ShowFuncOpen()
     let l:gp_s = &grepprg
     set grepformat&vim
     set grepprg&vim
-    let &grepformat = '%*\k%*\s%*\k%*\s%l%*\s%f %m' 
+    let &grepformat = '%*\k%*\s%t%*\k%*\s%l%*\s%f\ %m' 
 		if ( g:ShowFuncScanType == "buffers" )
       " Scan all open buffers.
 	    let l:currbuf = bufnr("%")
@@ -514,8 +517,10 @@ noremap! <silent> <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
 " 1.5.4   01-13-2005   Script cleanup.  Added MyLastWindow function (when
 "                      closing windows, tests last window to see if its a
 "                      Cwindow, if it is then close vim session). 
-" 1.5.5   07-20--2005  Patches from two Windows users (David Rennalls and Bill 
+" 1.5.5   07-20-2005   Patches from two Windows users (David Rennalls and Bill 
 "                      McCarthy).  Fixes in cleanup, documentaion, and autocmds.
+" 1.5.6   02-28-2006   First Vim 7 patches.  Added setlocal statusline support 
+"                      to update the cwindow name.
 "
 "                                                                            }}}
 " ------------------------------------------------------------------------------
