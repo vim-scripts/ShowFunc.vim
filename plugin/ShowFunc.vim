@@ -2,10 +2,10 @@
 " Filename:      ShowFunc.vim                                                {{{
 " VimScript:     #397
 "
-" Maintainer:    Dave Vehrs <davev (at) ezrs.com>
-" Last Modified: 28 Feb 2006 11:50:54 AM by Dave V
+" Maintainer:    Dave Vehrs <dvehrs (at) gmail.com>
+" Last Modified: 28 Mar 2006 03:58:12 PM by Dave V
 "
-" Copyright:     © 2002-2005 Dave Vehrs
+" Copyright:     (C) 2002,2003,2004,2005,2006 Dave Vehrs
 "
 "                This program is free software; you can redistribute it and/or
 "                modify it under the terms of the GNU General Public License as
@@ -67,6 +67,35 @@ endif
 " You can limited the filetypes that are supported by listing them seperated 
 " by "^@".  
 " let g:CtagsSupportedFileTypes = "c^@python^@perl^@"
+
+" ----- 
+" Sometimes you'll get more results than you want and you can filter the
+" output.
+
+" To find out what languages ctags supports:
+"                ctags --list-languages
+" To find out what tags are supported for each language, execute:
+"                ctags --list-kinds=<lang>
+" For example:
+"                ctags --list-kinds=vim
+"                a  autocommand groups
+"                f  function definitions
+"                v  variable definitions
+
+" Now, we can set ctags to just search for functions like so:
+"                let g:ShowFunc_vim_Kinds = "f"
+" To search for functions and autocommand groups:
+"                let g:ShowFunc_vim_Kinds = "af"
+"                let g:ShowFunc_vim_Kinds = "-a+f-v"
+" To search for everything but variables:
+"                let g:ShowFunc_vim_Kinds = "-v"
+let g:ShowFunc_vim_Kinds = "-v"
+let g:ShowFunc_php_Kinds = "-v"
+
+" To set filters for other languages, simply set a global variable for them 
+" by replacing the _vim_ with the vim filetype (same as ctags for all
+" languages but c++, then use cpp).
+"                let g:ShowFunc_cpp_Kinds = "-v"
 
 "                                                                            }}}
 " ------------------------------------------------------------------------------
@@ -311,8 +340,14 @@ function! s:SetGrepPrg(sort)
     else                      | let l:cfiletype = &filetype | endif
     let l:filetest = s:TestFileType(l:cfiletype)
     if l:filetest != "false"
-      let l:grep_return = g:showfuncctagsbin . ' -x --language-force=' . 
-        \ l:cfiletype . ' --sort=' . a:sort
+      if exists("g:ShowFunc_{&filetype}_Kinds")
+        let l:grep_return = g:showfuncctagsbin . ' -x --language-force=' . 
+          \ l:cfiletype . ' --' . &filetype . '-kinds=' .
+          \ g:ShowFunc_{&filetype}_Kinds . ' --sort=' . a:sort 
+      else
+        let l:grep_return = g:showfuncctagsbin . ' -x --language-force=' . 
+          \ l:cfiletype . ' --sort=' . a:sort
+      endif
     else | let l:grep_return = "fail" | endif
   endif
   return l:grep_return
@@ -507,7 +542,8 @@ noremap! <silent> <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
 "                      definitions are no longer necessary (eliminating the 
 "                      SetGrepFormat function).  Modified the SetGrepPrg function 
 "                      to detect Ctags versions earlier than 5.5.  Supportted 
-"                      filetypes for Ctags versions 5.4 are statically assigned.  
+"                      filetypes for Ctags versions 5.4 are statically 
+"                      assigned.  
 "                      With Ctags versions 5.5 (and later) supported filetypes 
 "                      are detected dynamically (including those defined by 
 "                      regular expressions (--regex-<LANG>).  
@@ -521,6 +557,9 @@ noremap! <silent> <Plug>ShowFunc   <ESC>:call <SID>ShowFuncOpen()<CR>
 "                      McCarthy).  Fixes in cleanup, documentaion, and autocmds.
 " 1.5.6   02-28-2006   First Vim 7 patches.  Added setlocal statusline support 
 "                      to update the cwindow name.
+" 1.5.7   03-27-2006   Per request by Diederik Van der Boor, added ability to
+"                      filter the variables kinds that ctags outputs (ver 5.5
+"                      or newer).
 "
 "                                                                            }}}
 " ------------------------------------------------------------------------------
