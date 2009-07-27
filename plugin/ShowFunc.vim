@@ -337,12 +337,12 @@ function! s:SetGrepPrg(sort)
     endif
   else
     if &filetype == "cpp" | let l:cfiletype = "c++"
-    else                      | let l:cfiletype = &filetype | endif
+    else | let l:cfiletype = &filetype | endif
     let l:filetest = s:TestFileType(l:cfiletype)
     if l:filetest != "false"
       if exists("g:ShowFunc_{&filetype}_Kinds")
         let l:grep_return = g:showfuncctagsbin . ' -x --language-force=' . 
-          \ l:cfiletype . ' --' . &filetype . '-kinds=' .
+          \ l:cfiletype . ' --' . l:cfiletype . '-kinds=' .
           \ g:ShowFunc_{&filetype}_Kinds . ' --sort=' . a:sort 
       else
         let l:grep_return = g:showfuncctagsbin . ' -x --language-force=' . 
