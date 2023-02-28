@@ -189,6 +189,10 @@ function! s:CtagsVersionTest(path)
     endif
     let g:loaded_showfunc = 0
     let l:rpath = "fail"
+  elseif match(l:test_str, "Ctags [6-9]") >= 0 "version 6-9
+    let l:rpath = a:path
+  elseif match(l:test_str, "Ctags [1-9][0-9]") >= 0 "version 10-99
+    let l:rpath = a:path
   else
     let l:rpath = a:path
     " Set Ctags version variables.
