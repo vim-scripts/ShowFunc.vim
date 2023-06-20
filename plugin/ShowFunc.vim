@@ -182,14 +182,17 @@ endfunction
 function! s:CtagsVersionTest(path) 
   " Test Ctags for correct ctags project.. 
   let l:test_str = strtrans(system(a:path . " -x  --version"))
-  let ctagsvertest = strpart(l:test_str,0,15)
-  if ctagsvertest != "Exuberant Ctags"
+  if match(l:test_str, "Exuberant Ctags") < 0 
     if ( !has("gui_running") || has("win32") )
       echo "ShowFunc Error: Incorrect Version of Ctags.\n".
         \  "Download the correct version from http://ctags.sourceforge.net"
     endif
     let g:loaded_showfunc = 0
     let l:rpath = "fail"
+  elseif match(l:test_str, "Ctags [6-9]") >= 0 "version 6-9
+    let l:rpath = a:path
+  elseif match(l:test_str, "Ctags [1-9][0-9]") >= 0 "version 10-99
+    let l:rpath = a:path
   else
     let l:rpath = a:path
     " Set Ctags version variables.
